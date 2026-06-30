@@ -1,0 +1,35 @@
+# 依赖
+node_modules
+.pnpm-store
+
+# 构建产物
+dist
+dist-ssr
+dev-dist
+
+# Android 构建产物
+android/app/build
+android/build
+android/.gradle
+android/capacitor-cordova-android-plugins/build
+android/local.properties
+
+# 日志
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# 本地环境
+*.local
+
+# 编辑器
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
