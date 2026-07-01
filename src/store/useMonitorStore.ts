@@ -276,11 +276,14 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
     const bizData = amountResp?.data?.biz_data;
     const updatedModels: ModelMetric[] = [];
 
+    // 只保留 V4 Flash 和 V4 Pro，过滤掉其他模型
+    const ALLOWED_MODELS = new Set(["deepseek-v4-flash", "deepseek-v4-pro"]);
+
     if (bizData?.total) {
       for (const item of bizData.total) {
+        if (!ALLOWED_MODELS.has(item.model)) continue;
+
         const breakdown = tokenBreakdown(item.usage);
-        // 过滤掉没有用量的模型（避免显示空的"CHAT & DEEPSEEK-REASONER"）
-        if (breakdown.totalTokens === 0 && breakdown.requestCount === 0) continue;
 
         const info = MODEL_INFO[item.model];
 
@@ -476,66 +479,69 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
         requests: 0,
       }));
 
-      // 构建模型数据
+      // 构建模型数据（仅当 API Key 能返回用量时才构建，否则保留平台数据）
       const modelIds = Object.keys(monthAgg);
-      const updatedModels: ModelMetric[] = modelIds.map((modelId) => {
-        const monthData = monthAgg[modelId];
-        const todayData = todayAgg[modelId] || emptyAgg();
-        const info = MODEL_INFO[modelId];
-        const totalTokens: TokenUsage = {
-          promptCacheHit: monthData.promptCacheHit,
-          promptCacheMiss: monthData.promptCacheMiss,
-          completion: monthData.completion,
-        };
-        const todayTokens: TokenUsage = {
-          promptCacheHit: todayData.promptCacheHit,
-          promptCacheMiss: todayData.promptCacheMiss,
-          completion: todayData.completion,
-        };
-        // 用定价算费用
-        const todayCost = calcCost(todayTokens, modelId);
-        const totalCost = calcCost(totalTokens, modelId);
-        return {
-          id: modelId as ModelId,
-          name: modelId,
-          displayName: info?.displayName ?? modelId,
-          description: info?.description ?? "",
-          todayTokens,
-          totalTokens,
-          todayCost: Number(todayCost.toFixed(4)),
-          totalCost: Number(totalCost.toFixed(2)),
-          todayRequests: todayData.requests,
-          rps: 0,
-          avgLatency: 0,
-          successRate: 100,
-          trend,
-          status: todayData.requests > 0 ? ("active" as const) : ("idle" as const),
-        };
-      });
-
-      // 计算总用量
-      const totalUsed = updatedModels.reduce((sum, m) => sum + m.totalCost, 0);
+      const hasUsageData = modelIds.length > 0;
 
       const updatedBalance: AccountBalance = {
         total: toppedUp,
-        used: Number(totalUsed.toFixed(2)),
+        used: 0,
         remaining: Number(totalBalance.toFixed(2)),
         freeCredits: grantedBalance,
         warningThreshold: get().balance.warningThreshold,
       };
 
-      // 判断连接状态：有余额就算连接成功，即使用量为空
-      const isConnected = totalBalance > 0 || updatedModels.length > 0;
+      // 判断连接状态：有余额就算连接成功
+      const isConnected = totalBalance > 0;
 
-      set({
-        models: updatedModels,
+      // 只有 API Key 能返回用量数据时才更新 models，否则保留平台数据不动
+      const updatePayload: Partial<MonitorState> = {
         balance: updatedBalance,
         connected: isConnected,
         loading: false,
         error: null,
         lastUpdate: Date.now(),
         debugRaw,
-      });
+      };
+
+      if (hasUsageData) {
+        const updatedModels: ModelMetric[] = modelIds.map((modelId) => {
+          const monthData = monthAgg[modelId];
+          const todayData = todayAgg[modelId] || emptyAgg();
+          const info = MODEL_INFO[modelId];
+          const totalTokens: TokenUsage = {
+            promptCacheHit: monthData.promptCacheHit,
+            promptCacheMiss: monthData.promptCacheMiss,
+            completion: monthData.completion,
+          };
+          const todayTokens: TokenUsage = {
+            promptCacheHit: todayData.promptCacheHit,
+            promptCacheMiss: todayData.promptCacheMiss,
+            completion: todayData.completion,
+          };
+          const todayCost = calcCost(todayTokens, modelId);
+          const totalCost = calcCost(totalTokens, modelId);
+          return {
+            id: modelId as ModelId,
+            name: modelId,
+            displayName: info?.displayName ?? modelId,
+            description: info?.description ?? "",
+            todayTokens,
+            totalTokens,
+            todayCost: Number(todayCost.toFixed(4)),
+            totalCost: Number(totalCost.toFixed(2)),
+            todayRequests: todayData.requests,
+            rps: 0,
+            avgLatency: 0,
+            successRate: 100,
+            trend,
+            status: todayData.requests > 0 ? ("active" as const) : ("idle" as const),
+          };
+        });
+        updatePayload.models = updatedModels;
+      }
+
+      set(updatePayload as MonitorState);
 
       // 同步数据到桌面小组件
       syncToWidget(get());

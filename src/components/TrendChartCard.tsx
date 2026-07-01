@@ -10,7 +10,7 @@ interface TrendChartCardProps {
   gradientId?: string;
 }
 
-type TimeRange = "1h" | "6h" | "24h";
+type TimeRange = "7d" | "14d" | "30d";
 
 // 趋势图表卡片
 export default function TrendChartCard({
@@ -20,9 +20,9 @@ export default function TrendChartCard({
   color = "#4D6BFE",
   gradientId = "trend-gradient",
 }: TrendChartCardProps) {
-  const [range, setRange] = useState<TimeRange>("24h");
+  const [range, setRange] = useState<TimeRange>("7d");
 
-  const sliceMap: Record<TimeRange, number> = { "1h": 2, "6h": 12, "24h": 48 };
+  const sliceMap: Record<TimeRange, number> = { "7d": 7, "14d": 14, "30d": 30 };
   const sliced = data.slice(-sliceMap[range]);
   const peak = Math.max(...sliced.map((d) => d.value), 0);
   const avg = sliced.length > 0 ? sliced.reduce((s, d) => s + d.value, 0) / sliced.length : 0;
@@ -39,7 +39,7 @@ export default function TrendChartCard({
           </p>
         </div>
         <div className="flex items-center gap-1 p-0.5 rounded-lg bg-white/5">
-          {(["1h", "6h", "24h"] as TimeRange[]).map((r) => (
+          {(["7d", "14d", "30d"] as TimeRange[]).map((r) => (
             <button
               key={r}
               onClick={() => setRange(r)}

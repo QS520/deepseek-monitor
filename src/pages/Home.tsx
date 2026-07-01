@@ -32,7 +32,7 @@ export default function Home() {
   // 合并所有模型的 token 趋势（优先使用平台 API 的按日数据）
   const mergedTrend =
     usageTokenReady && platformDays.length > 0
-      ? platformDays.slice(-7).map((d) => ({
+      ? platformDays.map((d) => ({
           time: d.date.slice(5),
           value: d.totalTokens,
         }))
