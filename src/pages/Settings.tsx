@@ -1,16 +1,23 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMonitorStore } from "@/store/useMonitorStore";
+import type { ModelInfo } from "@/lib/deepseekApi";
 import { PRICING } from "@/types";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
-import { Sliders, Save, RotateCcw, Wallet, Info, Key, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
+import { Sliders, Save, RotateCcw, Wallet, Info, Key, CheckCircle2, AlertCircle, RefreshCw, Server, Link } from "lucide-react";
 
 export default function Settings() {
   const balance = useMonitorStore((s) => s.balance);
   const updateWarningThreshold = useMonitorStore((s) => s.updateWarningThreshold);
   const apiKey = useMonitorStore((s) => s.apiKey);
   const setApiKey = useMonitorStore((s) => s.setApiKey);
+  const usageToken = useMonitorStore((s) => s.usageToken);
+  const setUsageToken = useMonitorStore((s) => s.setUsageToken);
+  const usageTokenReady = useMonitorStore((s) => s.usageTokenReady);
   const refreshFromApi = useMonitorStore((s) => s.refreshFromApi);
+  const refreshFromPlatform = useMonitorStore((s) => s.refreshFromPlatform);
+  const fetchAvailableModels = useMonitorStore((s) => s.fetchAvailableModels);
+  const availableModels = useMonitorStore((s) => s.availableModels);
   const connected = useMonitorStore((s) => s.connected);
   const loading = useMonitorStore((s) => s.loading);
   const error = useMonitorStore((s) => s.error);
@@ -20,6 +27,15 @@ export default function Settings() {
   const [saved, setSaved] = useState(false);
   const [keyInput, setKeyInput] = useState(apiKey);
   const [keySaved, setKeySaved] = useState(false);
+  const [usageTokenInput, setUsageTokenInput] = useState(usageToken);
+  const [usageTokenSaved, setUsageTokenSaved] = useState(false);
+
+  // 组件挂载时或 API Key 变化时获取模型列表
+  useEffect(() => {
+    if (apiKey) {
+      fetchAvailableModels();
+    }
+  }, [apiKey, fetchAvailableModels]);
 
   const handleSave = () => {
     updateWarningThreshold(threshold);
@@ -39,6 +55,15 @@ export default function Settings() {
     // 保存后立即拉取数据
     await refreshFromApi();
   };
+
+  const handleSaveUsageToken = async () => {
+    const token = usageTokenInput.trim();
+    setUsageToken(token);
+    setUsageTokenSaved(true);
+    setTimeout(() => setUsageTokenSaved(false), 2000);
+    // 保存后立即拉取平台数据
+    await refreshFromPlatform();
+  }; 
 
   const handleRefresh = async () => {
     await refreshFromApi();
@@ -105,6 +130,87 @@ export default function Settings() {
             </button>
           </div>
         </div>
+
+        {/* 用量 Token（网页登录）用于获取缓存命中率等详细数据 */}
+        <div className="glass-card rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Link size={14} className="text-neon-purple" />
+            <h3 className="text-sm font-semibold text-white">用量 Token（网页登录）</h3>
+            {usageTokenReady && (
+              <span className="ml-auto flex items-center gap-1 text-[10px] text-neon-green">
+                <CheckCircle2 size={12} />
+                已连接
+              </span>
+            )}
+          </div>
+          <p className="text-[11px] text-slate-400 mb-2 leading-relaxed">
+            用于获取缓存命中率等详细用量分类数据。在浏览器中登录
+            <span className="text-neon-cyan font-mono"> platform.deepseek.com </span>
+            后，打开开发者工具控制台执行：
+          </p>
+          <pre className="text-[10px] text-neon-green font-mono bg-black/40 rounded-lg p-2 mb-3 overflow-x-auto whitespace-pre-wrap break-all leading-relaxed">
+            JSON.parse(localStorage.userToken).value
+          </pre>
+
+          <input
+            type="text"
+            value={usageTokenInput}
+            onChange={(e) => setUsageTokenInput(e.target.value)}
+            placeholder="粘贴网页登录 Token..."
+            className="w-full px-3 py-2.5 rounded-xl bg-white/5 text-white text-xs font-mono placeholder:text-slate-600 outline-none border border-white/10 focus:border-neon-purple/50 transition-colors"
+          />
+
+          <div className="flex gap-3 mt-3">
+            <button
+              onClick={handleSaveUsageToken}
+              disabled={!usageTokenInput.trim()}
+              className="flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 disabled:opacity-40"
+              style={{
+                background: usageTokenSaved
+                  ? "linear-gradient(135deg, #00D9A3, #00E5FF)"
+                  : "linear-gradient(135deg, #A855F7, #7C3AED)",
+                color: "#fff",
+                boxShadow: "0 0 16px rgba(168, 85, 247, 0.3)",
+              }}
+            >
+              {usageTokenSaved ? <CheckCircle2 size={13} /> : <Save size={13} />}
+              {usageTokenSaved ? "已连接" : "保存并验证"}
+            </button>
+          </div>
+
+          <p className="text-[9px] text-slate-600 mt-2 leading-relaxed">
+            此 Token 与 API Key 不同，来自 DeepSeek 平台的网页登录会话。保存后可获取 per-model 的缓存命中/未命中/输出 Token 明细和 7 日趋势。
+          </p>
+        </div>
+
+        {/* 可用模型列表 */}
+        {availableModels.length > 0 && (
+          <div className="glass-card rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Server size={14} className="text-neon-cyan" />
+              <h3 className="text-sm font-semibold text-white">可用模型</h3>
+              <span className="ml-auto text-[10px] text-slate-500">
+                {availableModels.length} 个模型
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 mb-3 leading-relaxed">
+              从 DeepSeek API 获取的可用模型列表。
+            </p>
+            <div className="space-y-2 max-h-48 overflow-y-auto no-scrollbar">
+              {availableModels.map((model: ModelInfo) => (
+                <div
+                  key={model.id}
+                  className="p-2.5 rounded-lg bg-white/5 border border-white/10 hover:border-neon-cyan/30 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono text-neon-cyan">{model.id}</span>
+                    <span className="text-[9px] text-slate-500">{model.owned_by}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* 余额预警配置 */}
         <div className="glass-card rounded-2xl p-4">
@@ -238,3 +344,4 @@ export default function Settings() {
     </div>
   );
 }
+

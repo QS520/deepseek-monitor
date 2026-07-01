@@ -8,6 +8,7 @@ import BalanceCard from "@/components/BalanceCard";
 import ModelCard from "@/components/ModelCard";
 import TrendChartCard from "@/components/TrendChartCard";
 import { formatCost, formatTokens } from "@/lib/mockData";
+import { Target } from "lucide-react";
 
 const MODEL_COLORS: Record<string, string> = {
   "deepseek-v4-flash": "#4D6BFE",
@@ -22,19 +23,32 @@ export default function Home() {
   const models = useMonitorStore((s) => s.models);
   const balance = useMonitorStore((s) => s.balance);
   const selectModel = useMonitorStore((s) => s.selectModel);
+  const platformModels = useMonitorStore((s) => s.platformModels);
+  const platformDays = useMonitorStore((s) => s.platformDays);
+  const usageTokenReady = useMonitorStore((s) => s.usageTokenReady);
 
   const todayTotalCost = models.reduce((sum, m) => sum + m.todayCost, 0);
   const todayTotalTokens = models.reduce((sum, m) => sum + sumTokens(m.todayTokens), 0);
   const todayTotalRequests = models.reduce((sum, m) => sum + m.todayRequests, 0);
 
-  // 合并所有模型的 token 趋势
+  // 合并所有模型的 token 趋势（优先使用平台 API 的按日数据）
   const mergedTrend =
-    models.length > 0 && models[0].trend.length > 0
-      ? models[0].trend.map((_, i) => ({
-          time: models[0].trend[i].time,
-          value: models.reduce((sum, m) => sum + (m.trend[i]?.tokens || 0), 0),
+    usageTokenReady && platformDays.length > 0
+      ? platformDays.slice(-7).map((d) => ({
+          time: d.date.slice(5),
+          value: d.totalTokens,
         }))
-      : [];
+      : models.length > 0 && models[0].trend.length > 0
+        ? models[0].trend.map((_, i) => ({
+            time: models[0].trend[i].time,
+            value: models.reduce((sum, m) => sum + (m.trend[i]?.tokens || 0), 0),
+          }))
+        : [];
+
+  // 平台 API 总体缓存命中率
+  const totalHitAll = platformModels.reduce((s, m) => s + m.cacheHitTokens, 0);
+  const totalMissAll = platformModels.reduce((s, m) => s + m.cacheMissTokens, 0);
+  const totalHitRate = totalHitAll + totalMissAll > 0 ? totalHitAll / (totalHitAll + totalMissAll) : 0;
 
   const handleModelClick = (id: string) => {
     selectModel(id);
@@ -67,6 +81,33 @@ export default function Home() {
             </div>
           </div>
         </div>
+
+        {/* 缓存命中率总览（来自平台 API） */}
+        {usageTokenReady && platformModels.length > 0 && (
+          <div className="glass-card rounded-2xl p-4 border border-neon-green/10">
+            <div className="flex items-center gap-2 mb-3">
+              <Target size={14} className="text-neon-green" />
+              <h3 className="text-sm font-semibold text-white">缓存命中率</h3>
+              <span className="ml-auto text-[10px] text-slate-500 font-mono">平台数据</span>
+            </div>
+            <div className="flex items-center justify-between mb-3">
+              <span className="font-mono text-3xl font-extrabold" style={{ color: totalHitRate > 0.5 ? "#00D9A3" : "#FFD93D" }}>
+                {(totalHitRate * 100).toFixed(0)}%
+              </span>
+              <span className="text-[10px] text-slate-500">本月全部模型</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {platformModels.map((pm) => (
+                <div key={pm.model} className="p-2 rounded-lg bg-white/5">
+                  <span className="text-[10px] text-slate-400 block truncate">{pm.displayName}</span>
+                  <span className="font-mono text-lg font-bold" style={{ color: pm.cacheHitRate > 0.5 ? "#00D9A3" : "#FFD93D" }}>
+                    {(pm.cacheHitRate * 100).toFixed(0)}%
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Token 用量趋势 */}
         <TrendChartCard

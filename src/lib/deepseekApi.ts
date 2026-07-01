@@ -145,6 +145,39 @@ export async function fetchUsageCost(
   }
 }
 
+// 模型信息（来自官方 /models 接口）
+export interface ModelInfo {
+  id: string;
+  object: string;
+  owned_by: string;
+}
+
+// 模型列表响应
+export interface ModelsResponse {
+  object: string;
+  data: ModelInfo[];
+}
+
+// 查询可用模型列表
+export async function fetchModels(apiKey: string): Promise<ModelsResponse | null> {
+  try {
+    const resp = await fetch(`${API_BASE}/models`, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+    });
+    if (!resp.ok) {
+      throw new Error(`HTTP ${resp.status}`);
+    }
+    return await resp.json();
+  } catch (err) {
+    console.error("查询模型列表失败:", err);
+    return null;
+  }
+}
+
 // 验证 API Key 是否有效
 export async function validateApiKey(apiKey: string): Promise<boolean> {
   try {
@@ -160,3 +193,4 @@ export async function validateApiKey(apiKey: string): Promise<boolean> {
     return false;
   }
 }
+

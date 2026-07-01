@@ -1,11 +1,19 @@
 import { create } from "zustand";
 import type { ModelMetric, AccountBalance, TokenUsage, ModelId } from "@/types";
+import type { ModelInfo } from "@/lib/deepseekApi";
 import { calcCost, getPricing } from "@/types";
 import {
   fetchBalance,
   fetchUsage,
+  fetchModels,
   validateApiKey,
 } from "@/lib/deepseekApi";
+import {
+  fetchPlatformAmount,
+  fetchPlatformCost,
+  aggregatePlatformData,
+  type PlatformUsageResult,
+} from "@/lib/platformApi";
 import { registerPlugin } from "@capacitor/core";
 
 // 模型显示信息映射（未知模型使用模型 ID 作为显示名）
@@ -81,11 +89,16 @@ function syncToWidget(state: MonitorState) {
 
 interface MonitorState {
   models: ModelMetric[];
+  availableModels: ModelInfo[]; // 从 /models 接口获取的可用模型列表
   balance: AccountBalance;
   connected: boolean;
   lastUpdate: number;
   selectedModelId: string | null;
   apiKey: string;
+  usageToken: string;          // 平台网页登录 Token
+  usageTokenReady: boolean;    // Token 是否已验证
+  platformModels: PlatformModel[];  // 本月的详细分类数据
+  platformDays: PlatformDay[];      // 按日趋势含命中率
   loading: boolean;
   error: string | null;
   debugRaw: string | null; // 最近一次 API 调用的原始返回（用于调试用量接口）
@@ -94,7 +107,33 @@ interface MonitorState {
   selectModel: (id: string | null) => void;
   updateWarningThreshold: (value: number) => void;
   setApiKey: (key: string) => void;
+  setUsageToken: (token: string) => void;
   refreshFromApi: () => Promise<void>;
+  refreshFromPlatform: () => Promise<void>;
+  fetchAvailableModels: () => Promise<void>;
+}
+
+// 基于平台 API 的模型数据结构
+export interface PlatformModel {
+  model: string;
+  displayName: string;
+  totalTokens: number;
+  requestCount: number;
+  cacheHitTokens: number;
+  cacheMissTokens: number;
+  responseTokens: number;
+  cost: number;
+  cacheHitRate: number;
+}
+
+export interface PlatformDay {
+  date: string;
+  totalTokens: number;
+  cacheHit: number;
+  cacheMiss: number;
+  response: number;
+  cost: number;
+  cacheHitRate: number;
 }
 
 // 默认空数据（未连接 API Key 时不显示假模型）
@@ -121,13 +160,27 @@ function loadApiKey(): string {
   }
 }
 
+// 从本地存储读取用量 Token
+function loadUsageToken(): string {
+  try {
+    return localStorage.getItem("deepseek_usage_token") || "";
+  } catch {
+    return "";
+  }
+}
+
 export const useMonitorStore = create<MonitorState>((set, get) => ({
   models: emptyModels(),
+  availableModels: [],
   balance: emptyBalance(),
   connected: false,
   lastUpdate: Date.now(),
   selectedModelId: null,
   apiKey: loadApiKey(),
+  usageToken: loadUsageToken(),
+  usageTokenReady: false,
+  platformModels: [],
+  platformDays: [],
   loading: false,
   error: null,
   debugRaw: null,
@@ -155,14 +208,87 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
     set({ apiKey: key });
   },
 
+  setUsageToken: (token) => {
+    try {
+      localStorage.setItem("deepseek_usage_token", token);
+    } catch {
+      // localStorage 不可用时忽略
+    }
+    set({ usageToken: token, usageTokenReady: !!token });
+    // 保存后立即拉取平台数据
+    if (token) {
+      get().refreshFromPlatform();
+    }
+  },
+
+  // 从 platform.deepseek.com 拉取详细用量（含缓存命中率）
+  refreshFromPlatform: async () => {
+    const { usageToken } = get();
+    if (!usageToken) return;
+
+    const now = new Date();
+    const month = now.getMonth() + 1;
+    const year = now.getFullYear();
+
+    // 并行拉取 amount 和 cost
+    const [amountResp, costResp] = await Promise.all([
+      fetchPlatformAmount(usageToken, month, year),
+      fetchPlatformCost(usageToken, month, year),
+    ]);
+
+    if (!amountResp) {
+      set({ usageTokenReady: false });
+      return;
+    }
+
+    const result = aggregatePlatformData(amountResp, costResp);
+
+    // 构建平台模型列表
+    const ptModels: PlatformModel[] = result.models.map((m) => ({
+      model: m.model,
+      displayName: m.model.replace("deepseek-", "").toUpperCase(),
+      totalTokens: m.totalTokens,
+      requestCount: m.requestCount,
+      cacheHitTokens: m.cacheHitTokens,
+      cacheMissTokens: m.cacheMissTokens,
+      responseTokens: m.responseTokens,
+      cost: m.cost,
+      cacheHitRate: m.cacheHitTokens + m.cacheMissTokens > 0
+        ? m.cacheHitTokens / (m.cacheHitTokens + m.cacheMissTokens)
+        : 0,
+    }));
+
+    // 构建按日趋势
+    const ptDays: PlatformDay[] = result.days.map((d) => ({
+      date: d.date,
+      totalTokens: d.totalTokens,
+      cacheHit: d.cacheHit,
+      cacheMiss: d.cacheMiss,
+      response: d.response,
+      cost: d.cost,
+      cacheHitRate: d.cacheHit + d.cacheMiss > 0
+        ? d.cacheHit / (d.cacheHit + d.cacheMiss)
+        : 0,
+    }));
+
+    set({
+      platformModels: ptModels,
+      platformDays: ptDays,
+      usageTokenReady: true,
+    });
+  },
+
   refreshFromApi: async () => {
-    const { apiKey } = get();
+    const { apiKey, fetchAvailableModels } = get();
     if (!apiKey) {
       set({ connected: false, error: "请先设置 API Key" });
       return;
     }
 
     set({ loading: true, error: null });
+
+    // 同时获取模型列表（非阻塞）
+    fetchAvailableModels().catch(() => {});
 
     try {
       // 日期范围：本月1日到今天
@@ -333,6 +459,11 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
 
       // 同步数据到桌面小组件
       syncToWidget(get());
+
+      // 有用量 Token 时同步拉取平台详细数据
+      if (get().usageToken) {
+        get().refreshFromPlatform();
+      }
     } catch (err) {
       set({
         loading: false,
@@ -341,8 +472,31 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
       });
     }
   },
+
+  fetchAvailableModels: async () => {
+    const { apiKey } = get();
+    if (!apiKey) {
+      return;
+    }
+
+    try {
+      const modelsResp = await fetchModels(apiKey);
+      if (modelsResp && Array.isArray(modelsResp.data)) {
+        set({ availableModels: modelsResp.data });
+      }
+    } catch (err) {
+      console.error("获取模型列表失败:", err);
+    }
+  },
 }));
 
 // App 启动时立即同步一次当前状态到桌面小组件
 // （将上次的数据或空状态推送到 widget，避免 widget 显示空白）
 syncToWidget(useMonitorStore.getState());
+
+// App 启动时有用量 Token 就自动拉取平台数据
+const startupToken = loadUsageToken();
+if (startupToken) {
+  useMonitorStore.getState().refreshFromPlatform();
+}
+
