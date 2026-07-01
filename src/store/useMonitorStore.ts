@@ -7,51 +7,52 @@ import {
   fetchUsageCost,
   validateApiKey,
 } from "@/lib/deepseekApi";
+import { registerPlugin } from "@capacitor/core";
 
-// Capacitor 插件类型声明（原生 WidgetSync 插件）
-declare global {
-  interface Window {
-    WidgetSync?: {
-      saveData: (data: {
-        apiKey: string;
-        balance: string;
-        totalUsed: string;
-        todayUsed: string;
-        flashTokens: string;
-        proTokens: string;
-        connected: string;
-        lastUpdate: string;
-      }) => Promise<any>;
-    };
-  }
+// 注册原生 WidgetSync 插件（仅在原生 App 环境下可用，web 端调用会 reject）
+interface WidgetSyncPlugin {
+  saveData: (data: {
+    apiKey: string;
+    balance: string;
+    totalUsed: string;
+    todayUsed: string;
+    flashTokens: string;
+    proTokens: string;
+    connected: string;
+    lastUpdate: string;
+  }) => Promise<any>;
 }
+
+const WidgetSync = registerPlugin<WidgetSyncPlugin>("WidgetSync");
 
 // 同步数据到桌面小组件
 function syncToWidget(state: MonitorState) {
-  if (typeof window !== "undefined" && window.WidgetSync) {
-    const flashModel = state.models.find((m) => m.id === "deepseek-v4-flash");
-    const proModel = state.models.find((m) => m.id === "deepseek-v4-pro");
-    const flashTokens =
-      (flashModel?.totalTokens.promptCacheHit || 0) +
-      (flashModel?.totalTokens.promptCacheMiss || 0) +
-      (flashModel?.totalTokens.completion || 0);
-    const proTokens =
-      (proModel?.totalTokens.promptCacheHit || 0) +
-      (proModel?.totalTokens.promptCacheMiss || 0) +
-      (proModel?.totalTokens.completion || 0);
-    const now = new Date();
-    const timeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-    window.WidgetSync.saveData({
-      apiKey: state.apiKey,
-      balance: state.balance.remaining.toFixed(2),
-      totalUsed: state.balance.used.toFixed(2),
-      todayUsed: ((flashModel?.todayCost || 0) + (proModel?.todayCost || 0)).toFixed(4),
-      flashTokens: flashTokens.toLocaleString(),
-      proTokens: proTokens.toLocaleString(),
-      connected: state.connected ? "true" : "false",
-      lastUpdate: timeStr,
-    }).catch(() => {});
-  }
+  // 在原生 App 环境下才调用，web 端调用会被 catch 吞掉
+  if (!WidgetSync) return;
+  const flashModel = state.models.find((m) => m.id === "deepseek-v4-flash");
+  const proModel = state.models.find((m) => m.id === "deepseek-v4-pro");
+  const flashTokens =
+    (flashModel?.totalTokens.promptCacheHit || 0) +
+    (flashModel?.totalTokens.promptCacheMiss || 0) +
+    (flashModel?.totalTokens.completion || 0);
+  const proTokens =
+    (proModel?.totalTokens.promptCacheHit || 0) +
+    (proModel?.totalTokens.promptCacheMiss || 0) +
+    (proModel?.totalTokens.completion || 0);
+  const now = new Date();
+  const timeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  WidgetSync.saveData({
+    apiKey: state.apiKey,
+    balance: state.balance.remaining.toFixed(2),
+    totalUsed: state.balance.used.toFixed(2),
+    todayUsed: ((flashModel?.todayCost || 0) + (proModel?.todayCost || 0)).toFixed(4),
+    flashTokens: flashTokens.toLocaleString(),
+    proTokens: proTokens.toLocaleString(),
+    connected: state.connected ? "true" : "false",
+    lastUpdate: timeStr,
+  }).catch(() => {
+    // web 或原生调用失败时忽略
+  });
 }
 
 interface MonitorState {
@@ -376,3 +377,7 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
     }
   },
 }));
+
+// App 启动时立即同步一次当前状态到桌面小组件
+// （将上次的数据或空状态推送到 widget，避免 widget 显示空白）
+syncToWidget(useMonitorStore.getState());
