@@ -4,7 +4,7 @@ import type { ModelInfo } from "@/lib/deepseekApi";
 import { PRICING } from "@/types";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
-import { Sliders, Save, RotateCcw, Wallet, Info, Key, CheckCircle2, AlertCircle, RefreshCw, Server, Link } from "lucide-react";
+import { Sliders, Save, RotateCcw, Wallet, Info, Key, CheckCircle2, AlertCircle, RefreshCw, Server, Link, Trash2 } from "lucide-react";
 
 export default function Settings() {
   const balance = useMonitorStore((s) => s.balance);
@@ -13,6 +13,7 @@ export default function Settings() {
   const setApiKey = useMonitorStore((s) => s.setApiKey);
   const usageToken = useMonitorStore((s) => s.usageToken);
   const setUsageToken = useMonitorStore((s) => s.setUsageToken);
+  const clearConfig = useMonitorStore((s) => s.clearConfig);
   const usageTokenReady = useMonitorStore((s) => s.usageTokenReady);
   const refreshFromApi = useMonitorStore((s) => s.refreshFromApi);
   const refreshFromPlatform = useMonitorStore((s) => s.refreshFromPlatform);
@@ -67,6 +68,14 @@ export default function Settings() {
 
   const handleRefresh = async () => {
     await refreshFromApi();
+  };
+
+  const handleClearConfig = () => {
+    setKeyInput("");
+    setUsageTokenInput("");
+    setKeySaved(false);
+    setUsageTokenSaved(false);
+    clearConfig();
   };
 
   return (
@@ -325,7 +334,7 @@ export default function Settings() {
               <h3 className="text-sm font-semibold text-white">调试信息</h3>
             </div>
             <p className="text-[10px] text-slate-500 mb-2 leading-relaxed">
-              最近一次 API 调用的原始返回（余额 + 用量接口）。如果用量数据为空，请截图此区域反馈，以便适配接口结构。
+              API 原始返回：余额、用量、模型列表、平台用量。如果数据异常，请截图此区域反馈。
             </p>
             <pre className="text-[9px] text-neon-green font-mono bg-black/40 rounded-lg p-2 max-h-48 overflow-auto whitespace-pre-wrap break-all leading-relaxed">
               {debugRaw}
@@ -338,6 +347,31 @@ export default function Settings() {
           <p className="text-xs text-slate-400">DeepSeek API Monitor</p>
           <p className="text-[10px] text-slate-600 mt-1">实时监控 DeepSeek API 用量和费用</p>
         </div>
+
+        {/* 清空配置 */}
+        {(apiKey || usageToken) && (
+          <div className="glass-card rounded-2xl p-4 border border-neon-orange/10">
+            <div className="flex items-center gap-2 mb-2">
+              <Trash2 size={14} className="text-neon-orange" />
+              <h3 className="text-sm font-semibold text-white">清空配置</h3>
+            </div>
+            <p className="text-[10px] text-slate-500 mb-3 leading-relaxed">
+              清除已保存的 API Key 和用量 Token，恢复为初始状态。
+            </p>
+            <button
+              onClick={handleClearConfig}
+              className="w-full py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+              style={{
+                background: "linear-gradient(135deg, #FF6B35, #FF4757)",
+                color: "#fff",
+                boxShadow: "0 0 16px rgba(255, 107, 53, 0.3)",
+              }}
+            >
+              <Trash2 size={13} />
+              清空所有配置
+            </button>
+          </div>
+        )}
       </main>
 
       <BottomNav />

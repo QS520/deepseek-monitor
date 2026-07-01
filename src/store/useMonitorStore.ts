@@ -107,6 +107,7 @@ interface MonitorState {
   updateWarningThreshold: (value: number) => void;
   setApiKey: (key: string) => void;
   setUsageToken: (token: string) => void;
+  clearConfig: () => void;
   refreshFromApi: () => Promise<void>;
   refreshFromPlatform: () => Promise<void>;
   fetchAvailableModels: () => Promise<void>;
@@ -218,6 +219,28 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
     if (token) {
       get().refreshFromPlatform();
     }
+  },
+
+  clearConfig: () => {
+    try {
+      localStorage.removeItem("deepseek_api_key");
+      localStorage.removeItem("deepseek_usage_token");
+    } catch {
+      // ignore
+    }
+    set({
+      apiKey: "",
+      usageToken: "",
+      usageTokenReady: false,
+      connected: false,
+      models: [],
+      platformModels: [],
+      platformDays: [],
+      balance: emptyBalance(),
+      availableModels: [],
+      debugRaw: null,
+      error: null,
+    });
   },
 
   // 从 platform.deepseek.com 拉取详细用量（含缓存命中率）
@@ -359,6 +382,15 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
       platformDays: ptDays,
       usageTokenReady: true,
     });
+
+    // 把平台 API 响应也存入 debugRaw
+    const prev = get().debugRaw || "";
+    const platformDebug = JSON.stringify({
+      amount: amountResp?.data?.biz_data?.total?.map((m) => ({ model: m.model, usage: m.usage })),
+      cost: costResp?.data?.biz_data?.total?.map((m) => ({ model: m.model, usage: m.usage })),
+    }, null, 2);
+    const combined = prev + "\n\n=== 平台用量 ===\n" + platformDebug;
+    set({ debugRaw: combined.slice(0, 3000) });
   },
 
   refreshFromApi: async () => {
@@ -569,6 +601,11 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
       const modelsResp = await fetchModels(apiKey);
       if (modelsResp && Array.isArray(modelsResp.data)) {
         set({ availableModels: modelsResp.data });
+        // 把模型列表也存入 debugRaw
+        const prev = get().debugRaw || "";
+        const modelsDebug = JSON.stringify({ models: modelsResp.data }, null, 2);
+        const combined = prev + "\n\n=== 模型列表 ===\n" + modelsDebug;
+        set({ debugRaw: combined.slice(0, 3000) });
       }
     } catch (err) {
       console.error("获取模型列表失败:", err);
