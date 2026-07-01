@@ -14,6 +14,7 @@ export default function Settings() {
   const connected = useMonitorStore((s) => s.connected);
   const loading = useMonitorStore((s) => s.loading);
   const error = useMonitorStore((s) => s.error);
+  const debugRaw = useMonitorStore((s) => s.debugRaw);
 
   const [threshold, setThreshold] = useState(balance.warningThreshold);
   const [saved, setSaved] = useState(false);
@@ -209,6 +210,22 @@ export default function Settings() {
             </p>
           </div>
         </div>
+
+        {/* 调试信息 - 显示 API 原始返回，便于定位用量接口问题 */}
+        {debugRaw && (
+          <div className="glass-card rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Info size={14} className="text-neon-orange" />
+              <h3 className="text-sm font-semibold text-white">调试信息</h3>
+            </div>
+            <p className="text-[10px] text-slate-500 mb-2 leading-relaxed">
+              最近一次 API 调用的原始返回（余额 + 用量接口）。如果用量数据为空，请截图此区域反馈，以便适配接口结构。
+            </p>
+            <pre className="text-[9px] text-neon-green font-mono bg-black/40 rounded-lg p-2 max-h-48 overflow-auto whitespace-pre-wrap break-all leading-relaxed">
+              {debugRaw}
+            </pre>
+          </div>
+        )}
 
         {/* 关于 */}
         <div className="glass-card rounded-2xl p-4 text-center">

@@ -1,10 +1,9 @@
 import { create } from "zustand";
 import type { ModelMetric, AccountBalance, TokenUsage, ModelId } from "@/types";
-import { calcCost } from "@/types";
+import { calcCost, getPricing } from "@/types";
 import {
   fetchBalance,
-  fetchUsageAmount,
-  fetchUsageCost,
+  fetchUsage,
   validateApiKey,
 } from "@/lib/deepseekApi";
 import { registerPlugin } from "@capacitor/core";
@@ -89,6 +88,7 @@ interface MonitorState {
   apiKey: string;
   loading: boolean;
   error: string | null;
+  debugRaw: string | null; // 最近一次 API 调用的原始返回（用于调试用量接口）
 
   tick: () => void;
   selectModel: (id: string | null) => void;
@@ -130,6 +130,7 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
   apiKey: loadApiKey(),
   loading: false,
   error: null,
+  debugRaw: null,
 
   tick: () => {
     // 仅在有连接时做轻微模拟增量（保持趋势图活跃）
@@ -164,19 +165,25 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
     set({ loading: true, error: null });
 
     try {
-      // 并行请求余额和用量
+      // 日期范围：本月1日到今天
       const now = new Date();
-      const month = now.getMonth() + 1;
       const year = now.getFullYear();
+      const month = now.getMonth() + 1;
+      const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
+      const endDate = `${year}-${String(month).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+      const todayStr = `${year}-${String(month).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
-      const [balanceResp, amountResp, costResp] = await Promise.all([
+      // 并行请求余额和用量
+      const [balanceResp, usageResp] = await Promise.all([
         fetchBalance(apiKey),
-        fetchUsageAmount(apiKey, month, year),
-        fetchUsageCost(apiKey, month, year),
+        fetchUsage(apiKey, startDate, endDate),
       ]);
 
+      // 把原始返回存入 debugRaw（截断到 1500 字符防止过长）
+      const debugRaw = JSON.stringify({ balance: balanceResp, usage: usageResp }, null, 2).slice(0, 1500);
+
       if (!balanceResp) {
-        set({ loading: false, connected: false, error: "API Key 无效或网络错误" });
+        set({ loading: false, connected: false, error: "API Key 无效或网络错误", debugRaw });
         return;
       }
 
@@ -186,153 +193,88 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
       const grantedBalance = cnyInfo ? parseFloat(cnyInfo.granted_balance) : 0;
       const toppedUp = cnyInfo ? parseFloat(cnyInfo.topped_up_balance) : 0;
 
-      // 解析本月用量和费用
-      const amountData = amountResp?.data?.amount || [];
-      const costData = costResp?.data?.cost || [];
-
-      // 用 Set 收集所有出现过的模型 ID（不再硬编码 deepseek-v4-flash / deepseek-v4-pro）
-      const modelIdSet = new Set<string>();
-      for (const day of amountData) {
-        if (day.data) {
-          for (const id of Object.keys(day.data)) {
-            modelIdSet.add(id);
-          }
+      // 容错解析 usageResp，尝试多种可能的返回结构
+      // 可能结构 A: { data: [{model, prompt_tokens, completion_tokens, timestamp, ...}, ...] }
+      // 可能结构 B: [{model, prompt_tokens, completion_tokens, ...}, ...]
+      // 可能结构 C: { data: { usage: [...] } }
+      // 可能结构 D: { data: { amount: [...] } } (旧假设)
+      let usageList: any[] = [];
+      if (Array.isArray(usageResp)) {
+        usageList = usageResp;
+      } else if (usageResp && typeof usageResp === "object") {
+        if (Array.isArray(usageResp.data)) {
+          usageList = usageResp.data;
+        } else if (usageResp.data && Array.isArray(usageResp.data.usage)) {
+          usageList = usageResp.data.usage;
+        } else if (usageResp.data && Array.isArray(usageResp.data.amount)) {
+          usageList = usageResp.data.amount;
+        } else if (Array.isArray(usageResp.usage)) {
+          usageList = usageResp.usage;
         }
       }
-      for (const day of costData) {
-        if (day.data) {
-          for (const id of Object.keys(day.data)) {
-            modelIdSet.add(id);
-          }
-        }
-      }
-      const modelIds: string[] = Array.from(modelIdSet);
 
-      // 创建一个空的聚合对象
-      const emptyAgg = (): TokenUsage & { cost: number; requests: number } => ({
+      // 聚合按模型：月度总量 + 今日
+      const emptyAgg = () => ({
         promptCacheHit: 0,
         promptCacheMiss: 0,
         completion: 0,
-        cost: 0,
         requests: 0,
       });
+      const monthAgg: Record<string, ReturnType<typeof emptyAgg>> = {};
+      const todayAgg: Record<string, ReturnType<typeof emptyAgg>> = {};
+      const dayTokensMap: Record<string, number> = {}; // 按日期聚合 token（用于趋势）
 
-      // 聚合本月各模型数据
-      const modelAgg: Record<string, TokenUsage & { cost: number; requests: number }> = {};
-      for (const id of modelIds) {
-        modelAgg[id] = emptyAgg();
-      }
+      for (const item of usageList) {
+        if (!item || typeof item !== "object") continue;
+        // 提取模型 ID，可能字段名是 model 或 model_id
+        const modelId: string = item.model || item.model_id || "unknown";
+        // 提取 token 数，可能字段名有多种
+        const promptTokens = Number(item.prompt_tokens || item.prompt || 0);
+        const completionTokens = Number(item.completion_tokens || item.completion || 0);
+        const cacheHit = Number(item.prompt_cache_hit_tokens || item.cache_hit_tokens || 0);
+        const cacheMiss = Number(item.prompt_cache_miss_tokens || item.cache_miss_tokens || 0);
+        // 缓存未命中 = prompt - cacheHit（如果没单独给字段）
+        const cacheMissFinal = cacheMiss > 0 ? cacheMiss : Math.max(0, promptTokens - cacheHit);
+        // 提取日期/时间戳
+        const ts: string = item.timestamp || item.date || item.created_at || "";
 
-      // 累加每日用量
-      for (const day of amountData) {
-        const dayData = day.data;
-        if (!dayData) continue;
-        for (const modelId of modelIds) {
-          const entries = dayData[modelId];
-          if (entries && Array.isArray(entries)) {
-            for (const e of entries) {
-              const agg = modelAgg[modelId];
-              agg.promptCacheHit += e.cache_hit_tokens || 0;
-              agg.promptCacheMiss += e.cache_miss_tokens || 0;
-              agg.completion += e.completion_tokens || 0;
-              agg.requests += 1;
-            }
-          }
+        if (!monthAgg[modelId]) monthAgg[modelId] = emptyAgg();
+        monthAgg[modelId].promptCacheHit += cacheHit;
+        monthAgg[modelId].promptCacheMiss += cacheMissFinal;
+        monthAgg[modelId].completion += completionTokens;
+        monthAgg[modelId].requests += 1;
+
+        // 今日数据
+        if (ts && ts.startsWith(todayStr)) {
+          if (!todayAgg[modelId]) todayAgg[modelId] = emptyAgg();
+          todayAgg[modelId].promptCacheHit += cacheHit;
+          todayAgg[modelId].promptCacheMiss += cacheMissFinal;
+          todayAgg[modelId].completion += completionTokens;
+          todayAgg[modelId].requests += 1;
+        }
+
+        // 趋势：按日期聚合 token
+        const dayKey = ts ? ts.slice(0, 10) : "";
+        if (dayKey) {
+          dayTokensMap[dayKey] = (dayTokensMap[dayKey] || 0) + cacheHit + cacheMissFinal + completionTokens;
         }
       }
 
-      // 累加每日费用
-      for (const day of costData) {
-        const dayData = day.data;
-        if (!dayData) continue;
-        for (const modelId of modelIds) {
-          const entries = dayData[modelId];
-          if (entries && Array.isArray(entries)) {
-            for (const e of entries) {
-              modelAgg[modelId].cost += e.total_cost || 0;
-            }
-          }
-        }
-      }
+      // 构建趋势数据（最近 7 天）
+      const allDays = Object.keys(dayTokensMap).sort();
+      const recentDays = allDays.slice(-7);
+      const trend = recentDays.map((day) => ({
+        time: day.slice(5),
+        tokens: dayTokensMap[day],
+        cost: 0,
+        requests: 0,
+      }));
 
-      // 今天的数据
-      const todayStr = `${year}-${String(month).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-      const todayAmount = amountData.find((d) => d.date === todayStr);
-      const todayCostEntry = costData.find((d) => d.date === todayStr);
-
-      // 聚合今日各模型数据
-      const todayAgg: Record<string, TokenUsage & { cost: number; requests: number }> = {};
-      for (const id of modelIds) {
-        todayAgg[id] = emptyAgg();
-      }
-
-      if (todayAmount?.data) {
-        for (const modelId of modelIds) {
-          const entries = todayAmount.data[modelId];
-          if (entries && Array.isArray(entries)) {
-            for (const e of entries) {
-              const agg = todayAgg[modelId];
-              agg.promptCacheHit += e.cache_hit_tokens || 0;
-              agg.promptCacheMiss += e.cache_miss_tokens || 0;
-              agg.completion += e.completion_tokens || 0;
-              agg.requests += 1;
-            }
-          }
-        }
-      }
-
-      if (todayCostEntry?.data) {
-        for (const modelId of modelIds) {
-          const entries = todayCostEntry.data[modelId];
-          if (entries && Array.isArray(entries)) {
-            for (const e of entries) {
-              todayAgg[modelId].cost += e.total_cost || 0;
-            }
-          }
-        }
-      }
-
-      // 构建趋势数据（最近 7 天），遍历所有模型 ID
-      const trend: Array<{ time: string; tokens: number; cost: number; requests: number }> = [];
-      const recentDays = amountData.slice(-7);
-      for (const day of recentDays) {
-        if (!day.data) continue;
-        let dayTokens = 0;
-        let dayCost = 0;
-        let dayRequests = 0;
-        for (const modelId of modelIds) {
-          const entries = day.data[modelId];
-          if (entries && Array.isArray(entries)) {
-            for (const e of entries) {
-              dayTokens += (e.cache_hit_tokens || 0) + (e.cache_miss_tokens || 0) + (e.completion_tokens || 0);
-              dayRequests += 1;
-            }
-          }
-        }
-        // 对应费用
-        const dayCostEntry = costData.find((c) => c.date === day.date);
-        if (dayCostEntry?.data) {
-          for (const modelId of modelIds) {
-            const entries = dayCostEntry.data[modelId];
-            if (entries && Array.isArray(entries)) {
-              for (const e of entries) {
-                dayCost += e.total_cost || 0;
-              }
-            }
-          }
-        }
-        trend.push({
-          time: day.date?.slice(5) || "",
-          tokens: dayTokens,
-          cost: Number(dayCost.toFixed(4)),
-          requests: dayRequests,
-        });
-      }
-
-      // 构建更新后的模型数据，遍历所有模型 ID，用 MODEL_INFO 获取显示名
+      // 构建模型数据
+      const modelIds = Object.keys(monthAgg);
       const updatedModels: ModelMetric[] = modelIds.map((modelId) => {
-        const monthData = modelAgg[modelId];
-        const todayData = todayAgg[modelId];
+        const monthData = monthAgg[modelId];
+        const todayData = todayAgg[modelId] || emptyAgg();
         const info = MODEL_INFO[modelId];
         const totalTokens: TokenUsage = {
           promptCacheHit: monthData.promptCacheHit,
@@ -344,6 +286,9 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
           promptCacheMiss: todayData.promptCacheMiss,
           completion: todayData.completion,
         };
+        // 用定价算费用
+        const todayCost = calcCost(todayTokens, modelId);
+        const totalCost = calcCost(totalTokens, modelId);
         return {
           id: modelId as ModelId,
           name: modelId,
@@ -351,8 +296,8 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
           description: info?.description ?? "",
           todayTokens,
           totalTokens,
-          todayCost: Number(todayData.cost.toFixed(4)),
-          totalCost: Number(monthData.cost.toFixed(2)),
+          todayCost: Number(todayCost.toFixed(4)),
+          totalCost: Number(totalCost.toFixed(2)),
           todayRequests: todayData.requests,
           rps: 0,
           avgLatency: 0,
@@ -373,13 +318,17 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
         warningThreshold: get().balance.warningThreshold,
       };
 
+      // 判断连接状态：有余额就算连接成功，即使用量为空
+      const isConnected = totalBalance > 0 || updatedModels.length > 0;
+
       set({
         models: updatedModels,
         balance: updatedBalance,
-        connected: true,
+        connected: isConnected,
         loading: false,
         error: null,
         lastUpdate: Date.now(),
+        debugRaw,
       });
 
       // 同步数据到桌面小组件

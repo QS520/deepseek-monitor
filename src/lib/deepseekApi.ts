@@ -62,6 +62,35 @@ export async function fetchBalance(apiKey: string): Promise<BalanceResponse | nu
   }
 }
 
+// 查询用量明细（按日期范围）
+// 端点: GET /v1/usage?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD
+// 返回结构未在官方文档明确公开，此处用宽松类型 any 接收，由 store 侧做容错适配
+export async function fetchUsage(
+  apiKey: string,
+  startDate: string,
+  endDate: string
+): Promise<any | null> {
+  try {
+    const resp = await fetch(
+      `${API_BASE}/v1/usage?start_date=${startDate}&end_date=${endDate}`,
+      {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+      }
+    );
+    if (!resp.ok) {
+      throw new Error(`HTTP ${resp.status}`);
+    }
+    return await resp.json();
+  } catch (err) {
+    console.error("查询用量失败:", err);
+    return null;
+  }
+}
+
 // 查询指定月份的 token 用量
 export async function fetchUsageAmount(
   apiKey: string,
