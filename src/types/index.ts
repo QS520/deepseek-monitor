@@ -1,6 +1,6 @@
 // DeepSeek API 监控相关类型定义
 
-// 模型 ID (支持 deepseek-chat / deepseek-reasoner / deepseek-v4-flash / deepseek-v4-pro 等任意模型)
+// 模型 ID (支持 deepseek-v4-flash / deepseek-v4-pro)
 export type ModelId = string;
 
 // Token 用量明细 (按计费类型拆分)
@@ -72,18 +72,6 @@ export const PRICING: Record<string, ModelPricing> = {
     promptCacheHit: 0.025,
     promptCacheMiss: 3,
     completion: 6,
-  },
-  // V3 (deepseek-chat): 缓存命中 0.1, 未命中 1, 输出 2
-  "deepseek-chat": {
-    promptCacheHit: 0.1,
-    promptCacheMiss: 1,
-    completion: 2,
-  },
-  // R1 (deepseek-reasoner): 缓存命中 0.4, 未命中 4, 输出 16
-  "deepseek-reasoner": {
-    promptCacheHit: 0.4,
-    promptCacheMiss: 4,
-    completion: 16,
   },
 };
 

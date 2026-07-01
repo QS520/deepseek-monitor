@@ -288,32 +288,36 @@ export function aggregatePlatformData(
     }
   }
 
-  // 按日汇总：跨所有 model 合并
+  // 按日汇总：跨所有 model 合并（保留每个模型的独立数据）
   if (bizData?.days) {
-    const dayMap: Record<string, { hit: number; miss: number; response: number }> = {};
+    // 使用 Map<date, Map<model, breakdown>> 保持每个模型独立
+    const dayModelMap: Record<string, Record<string, TokenBreakdown>> = {};
 
     for (const day of bizData.days) {
       for (const modelItem of day.data) {
-        if (!dayMap[day.date]) {
-          dayMap[day.date] = { hit: 0, miss: 0, response: 0 };
+        if (!dayModelMap[day.date]) {
+          dayModelMap[day.date] = {};
         }
         const breakdown = tokenBreakdown(modelItem.usage);
-        dayMap[day.date].hit += breakdown.cacheHitTokens;
-        dayMap[day.date].miss += breakdown.cacheMissTokens;
-        dayMap[day.date].response += breakdown.responseTokens;
+        dayModelMap[day.date][modelItem.model] = breakdown;
       }
     }
 
     // 转为数组（保留排序）
-    const sortedDays = Object.keys(dayMap).sort();
+    const sortedDays = Object.keys(dayModelMap).sort();
     for (const date of sortedDays) {
-      const d = dayMap[date];
+      let dayHit = 0, dayMiss = 0, dayResponse = 0;
+      for (const [, breakdown] of Object.entries(dayModelMap[date])) {
+        dayHit += breakdown.cacheHitTokens;
+        dayMiss += breakdown.cacheMissTokens;
+        dayResponse += breakdown.responseTokens;
+      }
       days.push({
         date,
-        totalTokens: d.hit + d.miss + d.response,
-        cacheHit: d.hit,
-        cacheMiss: d.miss,
-        response: d.response,
+        totalTokens: dayHit + dayMiss + dayResponse,
+        cacheHit: dayHit,
+        cacheMiss: dayMiss,
+        response: dayResponse,
         cost: 0,
       });
     }

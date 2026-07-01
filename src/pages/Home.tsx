@@ -13,8 +13,6 @@ import { Target } from "lucide-react";
 const MODEL_COLORS: Record<string, string> = {
   "deepseek-v4-flash": "#4D6BFE",
   "deepseek-v4-pro": "#A855F7",
-  "deepseek-chat": "#00D9A3",
-  "deepseek-reasoner": "#FF6B35",
 };
 
 export default function Home() {

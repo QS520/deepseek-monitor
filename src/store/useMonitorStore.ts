@@ -12,16 +12,15 @@ import {
   fetchPlatformAmount,
   fetchPlatformCost,
   aggregatePlatformData,
+  tokenBreakdown,
   type PlatformUsageResult,
 } from "@/lib/platformApi";
 import { registerPlugin } from "@capacitor/core";
 
-// 模型显示信息映射（未知模型使用模型 ID 作为显示名）
+// 模型显示信息映射
 const MODEL_INFO: Record<string, { displayName: string; description: string }> = {
-  "deepseek-v4-flash": { displayName: "DeepSeek V4 Flash", description: "轻量高效 · 2840亿参数 · 高并发场景" },
-  "deepseek-v4-pro": { displayName: "DeepSeek V4 Pro", description: "旗舰推理 · 1.6万亿参数 · 复杂任务" },
-  "deepseek-chat": { displayName: "DeepSeek V3", description: "通用对话 · 快速响应" },
-  "deepseek-reasoner": { displayName: "DeepSeek R1", description: "深度推理 · 思维链" },
+  "deepseek-v4-flash": { displayName: "V4 Flash", description: "轻量高效 · 高并发场景" },
+  "deepseek-v4-pro": { displayName: "V4 Pro", description: "旗舰推理 · 复杂任务" },
 };
 
 // 注册原生 WidgetSync 插件（仅在原生 App 环境下可用，web 端调用会 reject）
@@ -229,6 +228,7 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
     const now = new Date();
     const month = now.getMonth() + 1;
     const year = now.getFullYear();
+    const todayStr = `${year}-${String(month).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
     // 并行拉取 amount 和 cost
     const [amountResp, costResp] = await Promise.all([
@@ -246,7 +246,7 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
     // 构建平台模型列表
     const ptModels: PlatformModel[] = result.models.map((m) => ({
       model: m.model,
-      displayName: m.model.replace("deepseek-", "").toUpperCase(),
+      displayName: MODEL_INFO[m.model]?.displayName ?? m.model.replace("deepseek-", "").toUpperCase(),
       totalTokens: m.totalTokens,
       requestCount: m.requestCount,
       cacheHitTokens: m.cacheHitTokens,
@@ -271,7 +271,87 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
         : 0,
     }));
 
+    // 从原始 API 响应构建 ModelMetric，填充到 models 数组
+    // 这样 Home 页面的今日总览和模型卡片都能正常显示
+    const bizData = amountResp?.data?.biz_data;
+    const updatedModels: ModelMetric[] = [];
+
+    if (bizData?.total) {
+      for (const item of bizData.total) {
+        const breakdown = tokenBreakdown(item.usage);
+        // 过滤掉没有用量的模型（避免显示空的"CHAT & DEEPSEEK-REASONER"）
+        if (breakdown.totalTokens === 0 && breakdown.requestCount === 0) continue;
+
+        const info = MODEL_INFO[item.model];
+
+        // 查找今日数据
+        let todayHit = 0, todayMiss = 0, todayResponse = 0, todayRequests = 0;
+        if (bizData?.days) {
+          const todayDay = bizData.days.find((d) => d.date === todayStr);
+          if (todayDay) {
+            const todayModel = todayDay.data.find((m) => m.model === item.model);
+            if (todayModel) {
+              const todayBreakdown = tokenBreakdown(todayModel.usage);
+              todayHit = todayBreakdown.cacheHitTokens;
+              todayMiss = todayBreakdown.cacheMissTokens;
+              todayResponse = todayBreakdown.responseTokens;
+              todayRequests = todayBreakdown.requestCount;
+            }
+          }
+        }
+
+        // 构建趋势数据（最近 7 天）
+        const trend: Array<{ time: string; tokens: number; cost: number; requests: number }> = [];
+        if (bizData?.days) {
+          const recentDays = bizData.days.slice(-7);
+          for (const day of recentDays) {
+            const dayModel = day.data.find((m) => m.model === item.model);
+            if (dayModel) {
+              const dayBreakdown = tokenBreakdown(dayModel.usage);
+              trend.push({
+                time: day.date.slice(5),
+                tokens: dayBreakdown.totalTokens,
+                cost: 0,
+                requests: dayBreakdown.requestCount,
+              });
+            }
+          }
+        }
+
+        const todayTokens: TokenUsage = {
+          promptCacheHit: todayHit,
+          promptCacheMiss: todayMiss,
+          completion: todayResponse,
+        };
+        const totalTokens: TokenUsage = {
+          promptCacheHit: breakdown.cacheHitTokens,
+          promptCacheMiss: breakdown.cacheMissTokens,
+          completion: breakdown.responseTokens,
+        };
+
+        const modelCost = result.models.find((m) => m.model === item.model)?.cost || 0;
+
+        updatedModels.push({
+          id: item.model as ModelId,
+          name: item.model,
+          displayName: info?.displayName ?? item.model.replace("deepseek-", "").toUpperCase(),
+          description: info?.description ?? "",
+          todayTokens,
+          totalTokens,
+          todayCost: 0, // 平台 API 不提供每日费用，只能显示月度总费用
+          totalCost: Number(modelCost.toFixed(2)),
+          todayRequests: todayRequests,
+          rps: 0,
+          avgLatency: 0,
+          successRate: 100,
+          trend,
+          status: todayRequests > 0 ? ("active" as const) : ("idle" as const),
+        });
+      }
+    }
+
     set({
+      models: updatedModels,
       platformModels: ptModels,
       platformDays: ptDays,
       usageTokenReady: true,

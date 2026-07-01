@@ -15,7 +15,7 @@ export interface BalanceResponse {
 }
 
 // 用量明细（来自官方 /api/v0/usage/amount 接口）
-// data 按日期分组，每日 data 下按模型 ID (deepseek-chat/reasoner/v4-flash/v4-pro 等) 分组
+// data 按日期分组，每日 data 下按模型 ID (v4-flash/v4-pro 等) 分组
 export interface UsageAmountResponse {
   data?: {
     amount?: Array<{
