@@ -122,7 +122,5 @@ export function formatTokens(n: number): string {
 
 // 格式化费用 (元)
 export function formatCost(n: number): string {
-  if (n >= 1000) return n.toFixed(2);
-  if (n >= 1) return n.toFixed(2);
-  return n.toFixed(4);
+  return n.toFixed(2);
 }
