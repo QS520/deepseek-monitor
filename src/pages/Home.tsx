@@ -26,10 +26,12 @@ export default function Home() {
   const todayTotalRequests = models.reduce((sum, m) => sum + m.todayRequests, 0);
 
   // 合并两个模型的 token 趋势
-  const mergedTrend = models[0].trend.map((_, i) => ({
-    time: models[0].trend[i].time,
-    value: models.reduce((sum, m) => sum + m.trend[i].tokens, 0),
-  }));
+  const mergedTrend = models[0].trend.length > 0
+    ? models[0].trend.map((_, i) => ({
+        time: models[0].trend[i].time,
+        value: models.reduce((sum, m) => sum + (m.trend[i]?.tokens || 0), 0),
+      }))
+    : [];
 
   const handleModelClick = (id: string) => {
     selectModel(id);

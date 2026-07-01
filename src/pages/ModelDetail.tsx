@@ -69,8 +69,8 @@ export default function ModelDetail() {
     },
   ];
 
-  const trendData = model.trend.map((t) => ({ time: t.time, value: t.tokens }));
-  const costTrendData = model.trend.map((t) => ({ time: t.time, value: Number((t.cost * 1000).toFixed(2)) }));
+  const trendData = model.trend.length > 0 ? model.trend.map((t) => ({ time: t.time, value: t.tokens })) : [];
+  const costTrendData = model.trend.length > 0 ? model.trend.map((t) => ({ time: t.time, value: Number((t.cost * 1000).toFixed(2)) })) : [];
 
   return (
     <div className="flex flex-col min-h-screen">

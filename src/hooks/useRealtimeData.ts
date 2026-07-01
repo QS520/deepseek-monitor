@@ -1,14 +1,20 @@
 import { useEffect } from "react";
 import { useMonitorStore } from "@/store/useMonitorStore";
 
-// 实时数据更新 Hook - 每 2 秒 tick 一次
-export function useRealtimeData(intervalMs = 2000) {
-  const tick = useMonitorStore((s) => s.tick);
+// 实时数据更新 Hook
+// 首次挂载时自动拉取一次数据，之后每 60 秒刷新一次
+export function useRealtimeData(intervalMs = 60000) {
+  const refreshFromApi = useMonitorStore((s) => s.refreshFromApi);
+  const apiKey = useMonitorStore((s) => s.apiKey);
 
   useEffect(() => {
+    if (!apiKey) return;
+    // 首次立即拉取
+    refreshFromApi();
+    // 定时刷新
     const timer = setInterval(() => {
-      tick();
+      refreshFromApi();
     }, intervalMs);
     return () => clearInterval(timer);
-  }, [tick, intervalMs]);
+  }, [refreshFromApi, apiKey, intervalMs]);
 }

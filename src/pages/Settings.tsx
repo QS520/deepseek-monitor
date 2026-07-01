@@ -3,14 +3,22 @@ import { useMonitorStore } from "@/store/useMonitorStore";
 import { PRICING } from "@/types";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
-import { Sliders, Save, RotateCcw, Wallet, Info } from "lucide-react";
+import { Sliders, Save, RotateCcw, Wallet, Info, Key, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
 
 export default function Settings() {
   const balance = useMonitorStore((s) => s.balance);
   const updateWarningThreshold = useMonitorStore((s) => s.updateWarningThreshold);
+  const apiKey = useMonitorStore((s) => s.apiKey);
+  const setApiKey = useMonitorStore((s) => s.setApiKey);
+  const refreshFromApi = useMonitorStore((s) => s.refreshFromApi);
+  const connected = useMonitorStore((s) => s.connected);
+  const loading = useMonitorStore((s) => s.loading);
+  const error = useMonitorStore((s) => s.error);
 
   const [threshold, setThreshold] = useState(balance.warningThreshold);
   const [saved, setSaved] = useState(false);
+  const [keyInput, setKeyInput] = useState(apiKey);
+  const [keySaved, setKeySaved] = useState(false);
 
   const handleSave = () => {
     updateWarningThreshold(threshold);
@@ -23,11 +31,80 @@ export default function Settings() {
     updateWarningThreshold(50);
   };
 
+  const handleSaveKey = async () => {
+    setApiKey(keyInput.trim());
+    setKeySaved(true);
+    setTimeout(() => setKeySaved(false), 2000);
+    // 保存后立即拉取数据
+    await refreshFromApi();
+  };
+
+  const handleRefresh = async () => {
+    await refreshFromApi();
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
       <TopBar title="设置" />
 
       <main className="flex-1 px-4 py-4 space-y-4">
+        {/* API Key 配置 */}
+        <div className="glass-card rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Key size={14} className="text-neon-cyan" />
+            <h3 className="text-sm font-semibold text-white">DeepSeek API Key</h3>
+            {connected && (
+              <span className="ml-auto flex items-center gap-1 text-[10px] text-neon-green">
+                <CheckCircle2 size={12} />
+                已连接
+              </span>
+            )}
+            {!connected && error && (
+              <span className="ml-auto flex items-center gap-1 text-[10px] text-neon-orange">
+                <AlertCircle size={12} />
+                {error}
+              </span>
+            )}
+          </div>
+          <p className="text-[11px] text-slate-400 mb-3 leading-relaxed">
+            在 DeepSeek 平台 → API Keys 页面创建 API Key，粘贴到此处。Key 仅保存在本地，不会上传。
+          </p>
+
+          <input
+            type="text"
+            value={keyInput}
+            onChange={(e) => setKeyInput(e.target.value)}
+            placeholder="sk-..."
+            className="w-full px-3 py-2.5 rounded-xl bg-white/5 text-white text-xs font-mono placeholder:text-slate-600 outline-none border border-white/10 focus:border-neon-cyan/50 transition-colors"
+          />
+
+          <div className="flex gap-3 mt-3">
+            <button
+              onClick={handleRefresh}
+              disabled={loading || !apiKey}
+              className="flex-1 py-2.5 rounded-xl bg-white/5 text-slate-300 text-xs font-medium hover:bg-white/10 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-40"
+            >
+              <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
+              {loading ? "刷新中..." : "刷新数据"}
+            </button>
+            <button
+              onClick={handleSaveKey}
+              disabled={loading || !keyInput.trim()}
+              className="flex-[2] py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 disabled:opacity-40"
+              style={{
+                background: keySaved
+                  ? "linear-gradient(135deg, #00D9A3, #00E5FF)"
+                  : "linear-gradient(135deg, #4D6BFE, #6366F1)",
+                color: "#fff",
+                boxShadow: "0 0 16px rgba(77, 107, 254, 0.3)",
+              }}
+            >
+              {keySaved ? <CheckCircle2 size={13} /> : <Save size={13} />}
+              {keySaved ? "已连接" : "保存并连接"}
+            </button>
+          </div>
+        </div>
+
         {/* 余额预警配置 */}
         <div className="glass-card rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-3">
