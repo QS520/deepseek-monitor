@@ -19,9 +19,9 @@ export default function PhoneFrame({ children }: PhoneFrameProps) {
       </div>
 
       {/* 手机外壳 */}
-      <div className="relative w-full max-w-[428px] min-h-screen sm:min-h-0 sm:h-[860px] bg-space-800 sm:rounded-[2.5rem] overflow-hidden shadow-2xl border-0 sm:border-[10px] sm:border-space-900 sm:ring-1 sm:ring-white/10">
+      <div className="relative w-full max-w-[428px] h-screen sm:h-[860px] bg-space-800 sm:rounded-[2.5rem] overflow-hidden shadow-2xl border-0 sm:border-[10px] sm:border-space-900 sm:ring-1 sm:ring-white/10 flex flex-col">
         {/* 状态栏模拟 (iOS 风格) */}
-        <div className="hidden sm:flex absolute top-0 inset-x-0 z-50 h-7 items-center justify-between px-6 pointer-events-none">
+        <div className="hidden sm:flex flex-shrink-0 absolute top-0 inset-x-0 z-50 h-7 items-center justify-between px-6 pointer-events-none">
           <span className="text-[11px] font-mono font-semibold text-white">9:41</span>
           <div className="flex items-center gap-1">
             <svg width="16" height="10" viewBox="0 0 16 10" fill="white"><rect x="0" y="6" width="2" height="4" rx="0.5"/><rect x="3.5" y="4" width="2" height="6" rx="0.5"/><rect x="7" y="2" width="2" height="8" rx="0.5"/><rect x="10.5" y="0" width="2" height="10" rx="0.5"/></svg>
@@ -30,13 +30,13 @@ export default function PhoneFrame({ children }: PhoneFrameProps) {
           </div>
         </div>
 
-        {/* 内容区域 */}
-        <div className="relative h-full overflow-y-auto no-scrollbar pt-0 sm:pt-7">
+        {/* 内容区域 - flex 布局，子页面自己管理滚动 */}
+        <div className="relative flex-1 flex flex-col overflow-hidden pt-0 sm:pt-7">
           {children}
         </div>
 
         {/* 底部 Home Indicator */}
-        <div className="hidden sm:flex absolute bottom-1 inset-x-0 z-50 justify-center pointer-events-none">
+        <div className="hidden sm:flex flex-shrink-0 absolute bottom-1 inset-x-0 z-50 justify-center pointer-events-none">
           <div className="w-32 h-1 rounded-full bg-white/30" />
         </div>
       </div>

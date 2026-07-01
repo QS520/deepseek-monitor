@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useMonitorStore } from "@/store/useMonitorStore";
 import { useRealtimeData } from "@/hooks/useRealtimeData";
-import { sumTokens, PRICING } from "@/types";
+import { sumTokens, getPricing } from "@/types";
 import TopBar from "@/components/TopBar";
 import DonutChart from "@/components/DonutChart";
 import TrendChartCard from "@/components/TrendChartCard";
@@ -13,6 +13,8 @@ import { Coins, Zap, Activity, Clock, TrendingUp } from "lucide-react";
 const MODEL_COLORS: Record<string, string> = {
   "deepseek-v4-flash": "#4D6BFE",
   "deepseek-v4-pro": "#A855F7",
+  "deepseek-chat": "#00D9A3",
+  "deepseek-reasoner": "#FF6B35",
 };
 
 export default function ModelDetail() {
@@ -23,7 +25,7 @@ export default function ModelDetail() {
 
   if (!model) {
     return (
-      <div className="flex flex-col min-h-screen">
+      <div className="flex flex-col h-full">
         <TopBar showBack onBack={() => navigate("/")} title="模型详情" />
         <div className="flex-1 flex items-center justify-center">
           <p className="text-slate-500">未找到该模型</p>
@@ -44,7 +46,7 @@ export default function ModelDetail() {
   ];
 
   // 费用明细 (按类型, 使用当前模型的定价)
-  const modelPricing = PRICING[model.id];
+  const modelPricing = getPricing(model.id);
   const costBreakdown = [
     {
       label: "缓存命中输入",
@@ -73,10 +75,10 @@ export default function ModelDetail() {
   const costTrendData = model.trend.length > 0 ? model.trend.map((t) => ({ time: t.time, value: Number((t.cost * 1000).toFixed(2)) })) : [];
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col h-full">
       <TopBar showBack onBack={() => navigate("/")} title="模型详情" />
 
-      <main className="flex-1 px-4 py-4 space-y-4">
+      <main className="flex-1 overflow-y-auto no-scrollbar px-4 py-4 space-y-4">
         {/* 模型标题卡 */}
         <div className="glass-card rounded-2xl p-4 relative overflow-hidden animate-slide-up">
           <div

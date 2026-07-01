@@ -12,6 +12,8 @@ import { formatCost, formatTokens } from "@/lib/mockData";
 const MODEL_COLORS: Record<string, string> = {
   "deepseek-v4-flash": "#4D6BFE",
   "deepseek-v4-pro": "#A855F7",
+  "deepseek-chat": "#00D9A3",
+  "deepseek-reasoner": "#FF6B35",
 };
 
 export default function Home() {
@@ -25,13 +27,14 @@ export default function Home() {
   const todayTotalTokens = models.reduce((sum, m) => sum + sumTokens(m.todayTokens), 0);
   const todayTotalRequests = models.reduce((sum, m) => sum + m.todayRequests, 0);
 
-  // 合并两个模型的 token 趋势
-  const mergedTrend = models[0].trend.length > 0
-    ? models[0].trend.map((_, i) => ({
-        time: models[0].trend[i].time,
-        value: models.reduce((sum, m) => sum + (m.trend[i]?.tokens || 0), 0),
-      }))
-    : [];
+  // 合并所有模型的 token 趋势
+  const mergedTrend =
+    models.length > 0 && models[0].trend.length > 0
+      ? models[0].trend.map((_, i) => ({
+          time: models[0].trend[i].time,
+          value: models.reduce((sum, m) => sum + (m.trend[i]?.tokens || 0), 0),
+        }))
+      : [];
 
   const handleModelClick = (id: string) => {
     selectModel(id);
@@ -39,10 +42,10 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col h-full">
       <TopBar />
 
-      <main className="flex-1 px-4 py-4 space-y-4">
+      <main className="flex-1 overflow-y-auto no-scrollbar px-4 py-4 space-y-4">
         {/* 余额卡片 */}
         <BalanceCard balance={balance} todayCost={todayTotalCost} />
 

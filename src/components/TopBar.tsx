@@ -23,7 +23,7 @@ export default function TopBar({ title = "DeepSeek Monitor", showBack = false, o
   const lowBalance = balance.remaining < balance.warningThreshold;
 
   return (
-    <header className="sticky top-0 z-30 backdrop-blur-xl bg-space-900/80 border-b border-white/5">
+    <header className="flex-shrink-0 z-30 backdrop-blur-xl bg-space-900/80 border-b border-white/5">
       <div className="px-4 pt-3 pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

@@ -44,10 +44,10 @@ export default function Settings() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col h-full">
       <TopBar title="设置" />
 
-      <main className="flex-1 px-4 py-4 space-y-4">
+      <main className="flex-1 overflow-y-auto no-scrollbar px-4 py-4 space-y-4">
         {/* API Key 配置 */}
         <div className="glass-card rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-3">
@@ -213,7 +213,7 @@ export default function Settings() {
         {/* 关于 */}
         <div className="glass-card rounded-2xl p-4 text-center">
           <p className="text-xs text-slate-400">DeepSeek API Monitor</p>
-          <p className="text-[10px] text-slate-600 mt-1">实时监控 deepseek-v4-flash 与 deepseek-v4-pro 的用量和费用</p>
+          <p className="text-[10px] text-slate-600 mt-1">实时监控 DeepSeek API 用量和费用</p>
         </div>
       </main>
 

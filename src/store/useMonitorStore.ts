@@ -9,6 +9,14 @@ import {
 } from "@/lib/deepseekApi";
 import { registerPlugin } from "@capacitor/core";
 
+// 模型显示信息映射（未知模型使用模型 ID 作为显示名）
+const MODEL_INFO: Record<string, { displayName: string; description: string }> = {
+  "deepseek-v4-flash": { displayName: "DeepSeek V4 Flash", description: "轻量高效 · 2840亿参数 · 高并发场景" },
+  "deepseek-v4-pro": { displayName: "DeepSeek V4 Pro", description: "旗舰推理 · 1.6万亿参数 · 复杂任务" },
+  "deepseek-chat": { displayName: "DeepSeek V3", description: "通用对话 · 快速响应" },
+  "deepseek-reasoner": { displayName: "DeepSeek R1", description: "深度推理 · 思维链" },
+};
+
 // 注册原生 WidgetSync 插件（仅在原生 App 环境下可用，web 端调用会 reject）
 interface WidgetSyncPlugin {
   saveData: (data: {
@@ -29,23 +37,40 @@ const WidgetSync = registerPlugin<WidgetSyncPlugin>("WidgetSync");
 function syncToWidget(state: MonitorState) {
   // 在原生 App 环境下才调用，web 端调用会被 catch 吞掉
   if (!WidgetSync) return;
-  const flashModel = state.models.find((m) => m.id === "deepseek-v4-flash");
-  const proModel = state.models.find((m) => m.id === "deepseek-v4-pro");
-  const flashTokens =
-    (flashModel?.totalTokens.promptCacheHit || 0) +
-    (flashModel?.totalTokens.promptCacheMiss || 0) +
-    (flashModel?.totalTokens.completion || 0);
-  const proTokens =
-    (proModel?.totalTokens.promptCacheHit || 0) +
-    (proModel?.totalTokens.promptCacheMiss || 0) +
-    (proModel?.totalTokens.completion || 0);
+
+  // 计算各模型的 token 总数（命中 + 未命中 + 补全）
+  const modelTokens = state.models.map(
+    (m) =>
+      (m.totalTokens.promptCacheHit || 0) +
+      (m.totalTokens.promptCacheMiss || 0) +
+      (m.totalTokens.completion || 0)
+  );
+
+  // 第一个模型的 token 填到 flashTokens，第二个填到 proTokens，
+  // 超过 2 个模型时多出的累加到 flashTokens
+  let flashTokens = 0;
+  let proTokens = 0;
+  state.models.forEach((_, idx) => {
+    const tokens = modelTokens[idx] || 0;
+    if (idx === 0) {
+      flashTokens += tokens;
+    } else if (idx === 1) {
+      proTokens += tokens;
+    } else {
+      flashTokens += tokens;
+    }
+  });
+
+  // 今日总费用：所有模型 todayCost 之和
+  const todayUsed = state.models.reduce((sum, m) => sum + m.todayCost, 0);
+
   const now = new Date();
   const timeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
   WidgetSync.saveData({
     apiKey: state.apiKey,
     balance: state.balance.remaining.toFixed(2),
     totalUsed: state.balance.used.toFixed(2),
-    todayUsed: ((flashModel?.todayCost || 0) + (proModel?.todayCost || 0)).toFixed(4),
+    todayUsed: todayUsed.toFixed(4),
     flashTokens: flashTokens.toLocaleString(),
     proTokens: proTokens.toLocaleString(),
     connected: state.connected ? "true" : "false",
@@ -72,42 +97,9 @@ interface MonitorState {
   refreshFromApi: () => Promise<void>;
 }
 
-// 默认空数据（未连接 API Key 时显示）
+// 默认空数据（未连接 API Key 时不显示假模型）
 function emptyModels(): ModelMetric[] {
-  return [
-    {
-      id: "deepseek-v4-flash" as ModelId,
-      name: "deepseek-v4-flash",
-      displayName: "DeepSeek V4 Flash",
-      description: "轻量高效 · 2840亿参数 · 高并发场景",
-      todayTokens: { promptCacheHit: 0, promptCacheMiss: 0, completion: 0 },
-      totalTokens: { promptCacheHit: 0, promptCacheMiss: 0, completion: 0 },
-      todayCost: 0,
-      totalCost: 0,
-      todayRequests: 0,
-      rps: 0,
-      avgLatency: 0,
-      successRate: 100,
-      trend: [],
-      status: "idle" as const,
-    },
-    {
-      id: "deepseek-v4-pro" as ModelId,
-      name: "deepseek-v4-pro",
-      displayName: "DeepSeek V4 Pro",
-      description: "旗舰推理 · 1.6万亿参数 · 复杂任务",
-      todayTokens: { promptCacheHit: 0, promptCacheMiss: 0, completion: 0 },
-      totalTokens: { promptCacheHit: 0, promptCacheMiss: 0, completion: 0 },
-      todayCost: 0,
-      totalCost: 0,
-      todayRequests: 0,
-      rps: 0,
-      avgLatency: 0,
-      successRate: 100,
-      trend: [],
-      status: "idle" as const,
-    },
-  ];
+  return [];
 }
 
 function emptyBalance(): AccountBalance {
@@ -198,17 +190,44 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
       const amountData = amountResp?.data?.amount || [];
       const costData = costResp?.data?.cost || [];
 
+      // 用 Set 收集所有出现过的模型 ID（不再硬编码 deepseek-v4-flash / deepseek-v4-pro）
+      const modelIdSet = new Set<string>();
+      for (const day of amountData) {
+        if (day.data) {
+          for (const id of Object.keys(day.data)) {
+            modelIdSet.add(id);
+          }
+        }
+      }
+      for (const day of costData) {
+        if (day.data) {
+          for (const id of Object.keys(day.data)) {
+            modelIdSet.add(id);
+          }
+        }
+      }
+      const modelIds: string[] = Array.from(modelIdSet);
+
+      // 创建一个空的聚合对象
+      const emptyAgg = (): TokenUsage & { cost: number; requests: number } => ({
+        promptCacheHit: 0,
+        promptCacheMiss: 0,
+        completion: 0,
+        cost: 0,
+        requests: 0,
+      });
+
       // 聚合本月各模型数据
-      const modelAgg: Record<string, TokenUsage & { cost: number; requests: number }> = {
-        "deepseek-v4-flash": { promptCacheHit: 0, promptCacheMiss: 0, completion: 0, cost: 0, requests: 0 },
-        "deepseek-v4-pro": { promptCacheHit: 0, promptCacheMiss: 0, completion: 0, cost: 0, requests: 0 },
-      };
+      const modelAgg: Record<string, TokenUsage & { cost: number; requests: number }> = {};
+      for (const id of modelIds) {
+        modelAgg[id] = emptyAgg();
+      }
 
       // 累加每日用量
       for (const day of amountData) {
         const dayData = day.data;
         if (!dayData) continue;
-        for (const modelId of ["deepseek-v4-flash", "deepseek-v4-pro"] as ModelId[]) {
+        for (const modelId of modelIds) {
           const entries = dayData[modelId];
           if (entries && Array.isArray(entries)) {
             for (const e of entries) {
@@ -226,7 +245,7 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
       for (const day of costData) {
         const dayData = day.data;
         if (!dayData) continue;
-        for (const modelId of ["deepseek-v4-flash", "deepseek-v4-pro"] as ModelId[]) {
+        for (const modelId of modelIds) {
           const entries = dayData[modelId];
           if (entries && Array.isArray(entries)) {
             for (const e of entries) {
@@ -241,13 +260,14 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
       const todayAmount = amountData.find((d) => d.date === todayStr);
       const todayCostEntry = costData.find((d) => d.date === todayStr);
 
-      const todayAgg: Record<string, TokenUsage & { cost: number; requests: number }> = {
-        "deepseek-v4-flash": { promptCacheHit: 0, promptCacheMiss: 0, completion: 0, cost: 0, requests: 0 },
-        "deepseek-v4-pro": { promptCacheHit: 0, promptCacheMiss: 0, completion: 0, cost: 0, requests: 0 },
-      };
+      // 聚合今日各模型数据
+      const todayAgg: Record<string, TokenUsage & { cost: number; requests: number }> = {};
+      for (const id of modelIds) {
+        todayAgg[id] = emptyAgg();
+      }
 
       if (todayAmount?.data) {
-        for (const modelId of ["deepseek-v4-flash", "deepseek-v4-pro"] as ModelId[]) {
+        for (const modelId of modelIds) {
           const entries = todayAmount.data[modelId];
           if (entries && Array.isArray(entries)) {
             for (const e of entries) {
@@ -262,7 +282,7 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
       }
 
       if (todayCostEntry?.data) {
-        for (const modelId of ["deepseek-v4-flash", "deepseek-v4-pro"] as ModelId[]) {
+        for (const modelId of modelIds) {
           const entries = todayCostEntry.data[modelId];
           if (entries && Array.isArray(entries)) {
             for (const e of entries) {
@@ -272,7 +292,7 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
         }
       }
 
-      // 构建趋势数据（最近 7 天）
+      // 构建趋势数据（最近 7 天），遍历所有模型 ID
       const trend: Array<{ time: string; tokens: number; cost: number; requests: number }> = [];
       const recentDays = amountData.slice(-7);
       for (const day of recentDays) {
@@ -280,8 +300,8 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
         let dayTokens = 0;
         let dayCost = 0;
         let dayRequests = 0;
-        for (const modelId of ["deepseek-v4-flash", "deepseek-v4-pro"]) {
-          const entries = day.data[modelId as ModelId];
+        for (const modelId of modelIds) {
+          const entries = day.data[modelId];
           if (entries && Array.isArray(entries)) {
             for (const e of entries) {
               dayTokens += (e.cache_hit_tokens || 0) + (e.cache_miss_tokens || 0) + (e.completion_tokens || 0);
@@ -292,8 +312,8 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
         // 对应费用
         const dayCostEntry = costData.find((c) => c.date === day.date);
         if (dayCostEntry?.data) {
-          for (const modelId of ["deepseek-v4-flash", "deepseek-v4-pro"]) {
-            const entries = dayCostEntry.data[modelId as ModelId];
+          for (const modelId of modelIds) {
+            const entries = dayCostEntry.data[modelId];
             if (entries && Array.isArray(entries)) {
               for (const e of entries) {
                 dayCost += e.total_cost || 0;
@@ -309,12 +329,11 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
         });
       }
 
-      // 构建更新后的模型数据
-      const updatedModels: ModelMetric[] = (
-        ["deepseek-v4-flash", "deepseek-v4-pro"] as ModelId[]
-      ).map((modelId) => {
+      // 构建更新后的模型数据，遍历所有模型 ID，用 MODEL_INFO 获取显示名
+      const updatedModels: ModelMetric[] = modelIds.map((modelId) => {
         const monthData = modelAgg[modelId];
         const todayData = todayAgg[modelId];
+        const info = MODEL_INFO[modelId];
         const totalTokens: TokenUsage = {
           promptCacheHit: monthData.promptCacheHit,
           promptCacheMiss: monthData.promptCacheMiss,
@@ -326,13 +345,10 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
           completion: todayData.completion,
         };
         return {
-          id: modelId,
+          id: modelId as ModelId,
           name: modelId,
-          displayName: modelId === "deepseek-v4-flash" ? "DeepSeek V4 Flash" : "DeepSeek V4 Pro",
-          description:
-            modelId === "deepseek-v4-flash"
-              ? "轻量高效 · 2840亿参数 · 高并发场景"
-              : "旗舰推理 · 1.6万亿参数 · 复杂任务",
+          displayName: info?.displayName ?? modelId,
+          description: info?.description ?? "",
           todayTokens,
           totalTokens,
           todayCost: Number(todayData.cost.toFixed(4)),

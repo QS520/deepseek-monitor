@@ -12,7 +12,7 @@ export default function BottomNav() {
   ];
 
   return (
-    <nav className="sticky bottom-0 z-30 backdrop-blur-xl bg-space-900/90 border-t border-white/5 px-2 pb-5 pt-2">
+    <nav className="flex-shrink-0 z-30 backdrop-blur-xl bg-space-900/90 border-t border-white/5 px-2 pb-5 pt-2">
       <div className="flex items-center justify-around">
         {tabs.map((tab) => {
           const active = location.pathname === tab.path;

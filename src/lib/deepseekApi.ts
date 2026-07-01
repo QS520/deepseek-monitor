@@ -15,24 +15,17 @@ export interface BalanceResponse {
 }
 
 // 用量明细（来自官方 /api/v0/usage/amount 接口）
+// data 按日期分组，每日 data 下按模型 ID (deepseek-chat/reasoner/v4-flash/v4-pro 等) 分组
 export interface UsageAmountResponse {
   data?: {
     amount?: Array<{
       date?: string;
-      data?: {
-        "deepseek-v4-flash"?: Array<{
-          prompt_tokens?: number;
-          completion_tokens?: number;
-          cache_hit_tokens?: number;
-          cache_miss_tokens?: number;
-        }>;
-        "deepseek-v4-pro"?: Array<{
-          prompt_tokens?: number;
-          completion_tokens?: number;
-          cache_hit_tokens?: number;
-          cache_miss_tokens?: number;
-        }>;
-      };
+      data?: Record<string, Array<{
+        prompt_tokens?: number;
+        completion_tokens?: number;
+        cache_hit_tokens?: number;
+        cache_miss_tokens?: number;
+      }>>;
     }>;
   };
 }
@@ -42,14 +35,9 @@ export interface UsageCostResponse {
   data?: {
     cost?: Array<{
       date?: string;
-      data?: {
-        "deepseek-v4-flash"?: Array<{
-          total_cost?: number;
-        }>;
-        "deepseek-v4-pro"?: Array<{
-          total_cost?: number;
-        }>;
-      };
+      data?: Record<string, Array<{
+        total_cost?: number;
+      }>>;
     }>;
   };
 }
