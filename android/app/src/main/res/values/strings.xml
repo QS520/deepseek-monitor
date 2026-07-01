@@ -4,4 +4,5 @@
     <string name="title_activity_main">DeepSeek Monitor</string>
     <string name="package_name">com.deepseek.monitor</string>
     <string name="custom_url_scheme">com.deepseek.monitor</string>
+    <string name="widget_description">显示 DeepSeek API 余额和用量</string>
 </resources>

@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/widget_background"
+    android:padding="12dp">
+
+    <!-- 顶部：标题 + 状态 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="6dp">
+
+        <TextView
+            android:id="@+id/widget_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="DeepSeek"
+            android:textColor="#6366F1"
+            android:textSize="12sp"
+            android:fontFamily="monospace"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/widget_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="● OFF"
+            android:textColor="#64748B"
+            android:textSize="9sp"
+            android:fontFamily="monospace" />
+    </LinearLayout>
+
+    <!-- 余额数值 -->
+    <TextView
+        android:id="@+id/widget_balance_value"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="¥--"
+        android:textColor="#4D6BFE"
+        android:textSize="24sp"
+        android:fontFamily="monospace"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:layout_marginBottom="4dp" />
+
+    <!-- 今日 + 本月费用 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_marginBottom="6dp">
+
+        <TextView
+            android:id="@+id/widget_today_cost"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="今日 ¥0"
+            android:textColor="#A855F7"
+            android:textSize="10sp"
+            android:fontFamily="monospace"
+            android:layout_marginEnd="12dp" />
+
+        <TextView
+            android:id="@+id/widget_month_cost"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="本月 ¥0"
+            android:textColor="#A855F7"
+            android:textSize="10sp"
+            android:fontFamily="monospace" />
+    </LinearLayout>
+
+    <!-- 分隔线 -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#22FFFFFF"
+        android:layout_marginBottom="6dp" />
+
+    <!-- Token 用量 -->
+    <TextView
+        android:id="@+id/widget_flash_tokens"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Flash 0"
+        android:textColor="#94A3B8"
+        android:textSize="9sp"
+        android:fontFamily="monospace"
+        android:layout_marginBottom="2dp" />
+
+    <TextView
+        android:id="@+id/widget_pro_tokens"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Pro 0"
+        android:textColor="#94A3B8"
+        android:textSize="9sp"
+        android:fontFamily="monospace"
+        android:layout_marginBottom="6dp" />
+
+    <!-- 更新时间 -->
+    <TextView
+        android:id="@+id/widget_update_time"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="未更新"
+        android:textColor="#475569"
+        android:textSize="8sp"
+        android:fontFamily="monospace"
+        android:gravity="end" />
+
+</LinearLayout>

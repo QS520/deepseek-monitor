@@ -60,9 +60,9 @@ export default function TopBar({ title = "DeepSeek Monitor", showBack = false, o
               </span>
             </div>
             {lowBalance && (
-              <div className="flex items-center gap-1 px-1.5 py-1 rounded-md bg-neon-orange/10">
-                <AlertTriangle size={11} className="text-neon-orange" />
-                <span className="text-[10px] text-neon-orange font-medium">余额低</span>
+              <div className="flex items-center gap-1 px-1.5 py-1 rounded-md bg-neon-orange/10 flex-shrink-0">
+                <AlertTriangle size={11} className="text-neon-orange flex-shrink-0" />
+                <span className="text-[10px] text-neon-orange font-medium whitespace-nowrap">余额低</span>
               </div>
             )}
             <span className="font-mono text-xs text-slate-400 tabular-nums">{timeStr}</span>
