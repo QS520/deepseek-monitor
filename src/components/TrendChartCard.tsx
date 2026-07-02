@@ -1,4 +1,3 @@
-import { useState } from "react";
 import LineChart from "@/components/LineChart";
 import type { LineChartPoint } from "@/components/LineChart";
 
@@ -10,8 +9,6 @@ interface TrendChartCardProps {
   gradientId?: string;
 }
 
-type TimeRange = "7d" | "14d" | "30d";
-
 // 趋势图表卡片
 export default function TrendChartCard({
   data,
@@ -20,10 +17,7 @@ export default function TrendChartCard({
   color = "#4D6BFE",
   gradientId = "trend-gradient",
 }: TrendChartCardProps) {
-  const [range, setRange] = useState<TimeRange>("7d");
-
-  const sliceMap: Record<TimeRange, number> = { "7d": 7, "14d": 14, "30d": 30 };
-  const sliced = data.slice(-sliceMap[range]);
+  const sliced = data.slice(-30);
   const peak = Math.max(...sliced.map((d) => d.value), 0);
   const avg = sliced.length > 0 ? sliced.reduce((s, d) => s + d.value, 0) / sliced.length : 0;
 
@@ -37,20 +31,6 @@ export default function TrendChartCard({
             <span className="mx-1.5 text-slate-700">·</span>
             均值 <span className="font-mono text-slate-400">{Math.floor(avg).toLocaleString()}{unit}</span>
           </p>
-        </div>
-        <div className="flex items-center gap-1 p-0.5 rounded-lg bg-white/5">
-          {(["7d", "14d", "30d"] as TimeRange[]).map((r) => (
-            <button
-              key={r}
-              onClick={() => setRange(r)}
-              className={`px-2 py-1 text-[10px] font-mono font-semibold rounded-md transition-all ${
-                range === r ? "bg-white/10" : "text-slate-500 hover:text-slate-300"
-              }`}
-              style={range === r ? { color, background: `${color}20` } : {}}
-            >
-              {r}
-            </button>
-          ))}
         </div>
       </div>
 

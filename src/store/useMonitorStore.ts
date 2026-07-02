@@ -395,24 +395,20 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
       });
     }
 
+    // 用平台月度 token 用量 + 官方定价计算月度费用
+    const monthCost = updatedModels.reduce((sum, m) => sum + m.totalCost, 0);
+    const currentBalance = get().balance;
+
     set({
       models: updatedModels,
       platformModels: ptModels,
       platformDays: ptDays,
       usageTokenReady: true,
+      balance: {
+        ...currentBalance,
+        used: Number(monthCost.toFixed(2)),
+      },
     });
-
-    // 用平台月度 token 用量 + 官方定价计算月度费用，更新 balance.used
-    const monthCost = updatedModels.reduce((sum, m) => sum + m.totalCost, 0);
-    const currentBalance = get().balance;
-    if (monthCost > 0) {
-      set({
-        balance: {
-          ...currentBalance,
-          used: Number(monthCost.toFixed(2)),
-        },
-      });
-    }
 
     // 把平台 API 响应也存入 debugRaw
     const prev = get().debugRaw || "";
@@ -548,7 +544,7 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
 
       const updatedBalance: AccountBalance = {
         total: toppedUp,
-        used: 0,
+        used: get().balance.used, // 保留已计算的已使用费用，不重置为 0
         remaining: Number(totalBalance.toFixed(2)),
         freeCredits: grantedBalance,
         warningThreshold: get().balance.warningThreshold,
