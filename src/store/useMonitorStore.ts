@@ -303,7 +303,7 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
     const updatedModels: ModelMetric[] = [];
 
     // 确保 V4 Flash 和 V4 Pro 始终都显示，即使 API 没返回数据也显示 0
-    const ALLOWED_MODELS = ["deepseek-v4-flash", "deepseek-v4-pro"];
+    const ALLOWED_MODEL_LIST = ["deepseek-v4-flash", "deepseek-v4-pro"];
 
     // 构建 API 数据查找表
     const apiDataMap: Record<string, any> = {};
@@ -313,7 +313,7 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
       }
     }
 
-    for (const modelId of ALLOWED_MODELS) {
+    for (const modelId of ALLOWED_MODEL_LIST) {
       const apiItem = apiDataMap[modelId];
       const breakdown = apiItem ? tokenBreakdown(apiItem.usage) : { totalTokens: 0, requestCount: 0, cacheHitTokens: 0, cacheMissTokens: 0, responseTokens: 0 };
 
