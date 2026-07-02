@@ -83,8 +83,6 @@ public class BalanceWidget extends AppWidgetProvider {
 
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_balance);
 
-        views.setTextViewText(R.id.widget_title, "DeepSeek Monitor");
-
         if (hasData) {
             views.setTextViewText(R.id.widget_status, isConnected ? "● 在线" : "● 离线");
             views.setTextColor(R.id.widget_status, isConnected ? Color.parseColor("#00D9A3") : Color.parseColor("#FF6B35"));
@@ -92,8 +90,8 @@ public class BalanceWidget extends AppWidgetProvider {
             views.setTextColor(R.id.widget_balance_value, Color.parseColor("#60A5FA"));
             views.setTextViewText(R.id.widget_today_cost, "今日 ¥" + todayUsed);
             views.setTextViewText(R.id.widget_month_cost, "本月 ¥" + totalUsed);
-            views.setTextViewText(R.id.widget_flash_tokens, "Flash  " + flashTokens);
-            views.setTextViewText(R.id.widget_pro_tokens, "Pro  " + proTokens);
+            views.setTextViewText(R.id.widget_flash_tokens, flashTokens + " tokens");
+            views.setTextViewText(R.id.widget_pro_tokens, proTokens + " tokens");
         } else {
             views.setTextViewText(R.id.widget_status, "等待数据");
             views.setTextColor(R.id.widget_status, Color.parseColor("#94A3B8"));
@@ -101,8 +99,8 @@ public class BalanceWidget extends AppWidgetProvider {
             views.setTextColor(R.id.widget_balance_value, Color.parseColor("#60A5FA"));
             views.setTextViewText(R.id.widget_today_cost, "今日 --");
             views.setTextViewText(R.id.widget_month_cost, "本月 --");
-            views.setTextViewText(R.id.widget_flash_tokens, "Flash  等待同步");
-            views.setTextViewText(R.id.widget_pro_tokens, "Pro  等待同步");
+            views.setTextViewText(R.id.widget_flash_tokens, "等待同步");
+            views.setTextViewText(R.id.widget_pro_tokens, "等待同步");
         }
 
         if (!lastUpdate.isEmpty()) {
