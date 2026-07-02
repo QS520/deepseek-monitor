@@ -4,13 +4,13 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#1E293B"
+    android:background="#0F1729"
     android:paddingLeft="14dp"
     android:paddingRight="14dp"
     android:paddingTop="12dp"
     android:paddingBottom="12dp">
 
-    <!-- 标题行 -->
+    <!-- 顶部标题行 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -19,11 +19,10 @@
         android:layout_marginBottom="10dp">
 
         <TextView
-            android:id="@+id/widget_title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="DeepSeek"
+            android:text="DeepSeek Monitor"
             android:textColor="#E2E8F0"
             android:textSize="11sp"
             android:textStyle="bold" />
@@ -41,152 +40,150 @@
             android:id="@+id/widget_refresh_btn"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="↻ 刷新"
+            android:text="↻"
             android:textColor="#CBD5E1"
-            android:textSize="9sp"
-            android:padding="4dp" />
+            android:textSize="12sp"
+            android:paddingLeft="4dp"
+            android:paddingRight="4dp"
+            android:paddingTop="2dp"
+            android:paddingBottom="2dp" />
     </LinearLayout>
 
-    <!-- 余额数值 -->
-    <TextView
-        android:id="@+id/widget_balance_value"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="¥ --.--"
-        android:textColor="#60A5FA"
-        android:textSize="30sp"
-        android:textStyle="bold"
-        android:gravity="center"
-        android:layout_marginBottom="2dp" />
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="剩余余额"
-        android:textColor="#64748B"
-        android:textSize="9sp"
-        android:gravity="center"
-        android:layout_marginBottom="10dp" />
-
-    <!-- 今日 / 本月费用 -->
+    <!-- 余额 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginBottom="10dp">
+        android:orientation="vertical"
+        android:gravity="center_horizontal"
+        android:layout_marginBottom="12dp">
 
-        <LinearLayout
-            android:layout_width="0dp"
+        <TextView
+            android:id="@+id/widget_balance_value"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:layout_marginRight="5dp">
-
-            <TextView
-                android:id="@+id/widget_today_cost"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="今日 --"
-                android:textColor="#C084FC"
-                android:textSize="11sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="今日消耗"
-                android:textColor="#64748B"
-                android:textSize="8sp"
-                android:layout_marginTop="2dp" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:layout_marginLeft="5dp">
-
-            <TextView
-                android:id="@+id/widget_month_cost"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="本月 --"
-                android:textColor="#C084FC"
-                android:textSize="11sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="本月消耗"
-                android:textColor="#64748B"
-                android:textSize="8sp"
-                android:layout_marginTop="2dp" />
-        </LinearLayout>
-    </LinearLayout>
-
-    <!-- 分隔线 -->
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="#334155"
-        android:layout_marginBottom="8dp" />
-
-    <!-- Token 用量 -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginBottom="4dp">
+            android:text="¥ --.--"
+            android:textColor="#60A5FA"
+            android:textSize="26sp"
+            android:textStyle="bold" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Flash"
-            android:textColor="#60A5FA"
+            android:text="剩余余额"
+            android:textColor="#64748B"
             android:textSize="9sp"
-            android:textStyle="bold"
-            android:layout_marginRight="6dp" />
+            android:layout_marginTop="2dp" />
+    </LinearLayout>
+
+    <!-- Flash 模型卡片 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="#1E293B"
+        android:paddingLeft="10dp"
+        android:paddingRight="10dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:layout_marginBottom="6dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="4dp">
+
+            <View
+                android:layout_width="6dp"
+                android:layout_height="6dp"
+                android:background="#60A5FA"
+                android:layout_marginRight="5dp" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="V4 Flash"
+                android:textColor="#60A5FA"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/widget_flash_cost"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="--"
+                android:textColor="#C084FC"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+        </LinearLayout>
 
         <TextView
             android:id="@+id/widget_flash_tokens"
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:text="等待同步"
             android:textColor="#CBD5E1"
-            android:textSize="9sp" />
+            android:textSize="11sp"
+            android:textStyle="bold" />
     </LinearLayout>
 
+    <!-- Pro 模型卡片 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginBottom="8dp">
+        android:orientation="vertical"
+        android:background="#1E293B"
+        android:paddingLeft="10dp"
+        android:paddingRight="10dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:layout_marginBottom="10dp">
 
-        <TextView
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Pro"
-            android:textColor="#A855F7"
-            android:textSize="9sp"
-            android:textStyle="bold"
-            android:layout_marginRight="6dp" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="4dp">
+
+            <View
+                android:layout_width="6dp"
+                android:layout_height="6dp"
+                android:background="#A855F7"
+                android:layout_marginRight="5dp" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="V4 Pro"
+                android:textColor="#A855F7"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/widget_pro_cost"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="--"
+                android:textColor="#C084FC"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+        </LinearLayout>
 
         <TextView
             android:id="@+id/widget_pro_tokens"
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:text="等待同步"
             android:textColor="#CBD5E1"
-            android:textSize="9sp" />
+            android:textSize="11sp"
+            android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- 更新时间 -->
+    <!-- 底部更新时间 -->
     <TextView
         android:id="@+id/widget_update_time"
         android:layout_width="match_parent"

@@ -31,7 +31,11 @@ interface WidgetSyncPlugin {
     totalUsed: string;
     todayUsed: string;
     flashTokens: string;
+    flashTodayTokens: string;
+    flashTodayCost: string;
     proTokens: string;
+    proTodayTokens: string;
+    proTodayCost: string;
     connected: string;
     lastUpdate: string;
   }) => Promise<any>;
@@ -41,33 +45,54 @@ const WidgetSync = registerPlugin<WidgetSyncPlugin>("WidgetSync");
 
 // 同步数据到桌面小组件
 function syncToWidget(state: MonitorState) {
-  // 在原生 App 环境下才调用，web 端调用会被 catch 吞掉
   if (!WidgetSync) return;
 
   // 计算各模型的 token 总数（命中 + 未命中 + 补全）
-  const modelTokens = state.models.map(
+  const totalModelTokens = state.models.map(
     (m) =>
       (m.totalTokens.promptCacheHit || 0) +
       (m.totalTokens.promptCacheMiss || 0) +
       (m.totalTokens.completion || 0)
   );
+  const todayModelTokens = state.models.map(
+    (m) =>
+      (m.todayTokens.promptCacheHit || 0) +
+      (m.todayTokens.promptCacheMiss || 0) +
+      (m.todayTokens.completion || 0)
+  );
 
-  // 第一个模型的 token 填到 flashTokens，第二个填到 proTokens，
-  // 超过 2 个模型时多出的累加到 flashTokens
+  // 按模型 ID 查找
+  const flashModel = state.models.find((m) => m.id === "deepseek-v4-flash");
+  const proModel = state.models.find((m) => m.id === "deepseek-v4-pro");
+
+  const flashTodayTokens = flashModel
+    ? (flashModel.todayTokens.promptCacheHit || 0) +
+      (flashModel.todayTokens.promptCacheMiss || 0) +
+      (flashModel.todayTokens.completion || 0)
+    : 0;
+  const flashTodayCost = flashModel?.todayCost ?? 0;
+
+  const proTodayTokens = proModel
+    ? (proModel.todayTokens.promptCacheHit || 0) +
+      (proModel.todayTokens.promptCacheMiss || 0) +
+      (proModel.todayTokens.completion || 0)
+    : 0;
+  const proTodayCost = proModel?.todayCost ?? 0;
+
+  // 兼容旧字段（累计 token）
   let flashTokens = 0;
   let proTokens = 0;
-  state.models.forEach((_, idx) => {
-    const tokens = modelTokens[idx] || 0;
-    if (idx === 0) {
+  state.models.forEach((m, idx) => {
+    const tokens = totalModelTokens[idx] || 0;
+    if (m.id === "deepseek-v4-flash") {
       flashTokens += tokens;
-    } else if (idx === 1) {
+    } else if (m.id === "deepseek-v4-pro") {
       proTokens += tokens;
     } else {
       flashTokens += tokens;
     }
   });
 
-  // 今日总费用：所有模型 todayCost 之和
   const todayUsed = state.models.reduce((sum, m) => sum + m.todayCost, 0);
 
   const now = new Date();
@@ -78,7 +103,11 @@ function syncToWidget(state: MonitorState) {
     totalUsed: state.balance.used.toFixed(2),
     todayUsed: todayUsed.toFixed(4),
     flashTokens: flashTokens.toLocaleString(),
+    flashTodayTokens: flashTodayTokens.toLocaleString(),
+    flashTodayCost: flashTodayCost.toFixed(4),
     proTokens: proTokens.toLocaleString(),
+    proTodayTokens: proTodayTokens.toLocaleString(),
+    proTodayCost: proTodayCost.toFixed(4),
     connected: state.connected ? "true" : "false",
     lastUpdate: timeStr,
   }).catch(() => {

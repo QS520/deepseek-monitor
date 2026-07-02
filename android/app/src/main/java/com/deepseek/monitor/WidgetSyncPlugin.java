@@ -24,7 +24,11 @@ public class WidgetSyncPlugin extends Plugin {
         String totalUsed = call.getString("totalUsed", "0");
         String todayUsed = call.getString("todayUsed", "0");
         String flashTokens = call.getString("flashTokens", "0");
+        String flashTodayTokens = call.getString("flashTodayTokens", "0");
+        String flashTodayCost = call.getString("flashTodayCost", "0");
         String proTokens = call.getString("proTokens", "0");
+        String proTodayTokens = call.getString("proTodayTokens", "0");
+        String proTodayCost = call.getString("proTodayCost", "0");
         String connected = call.getString("connected", "false");
         String lastUpdate = call.getString("lastUpdate", "");
 
@@ -35,7 +39,11 @@ public class WidgetSyncPlugin extends Plugin {
         editor.putString("totalUsed", totalUsed);
         editor.putString("todayUsed", todayUsed);
         editor.putString("flashTokens", flashTokens);
+        editor.putString("flashTodayTokens", flashTodayTokens);
+        editor.putString("flashTodayCost", flashTodayCost);
         editor.putString("proTokens", proTokens);
+        editor.putString("proTodayTokens", proTodayTokens);
+        editor.putString("proTodayCost", proTodayCost);
         editor.putString("connected", connected);
         editor.putString("lastUpdate", lastUpdate);
         editor.apply();

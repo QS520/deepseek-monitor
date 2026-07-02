@@ -73,8 +73,10 @@ public class BalanceWidget extends AppWidgetProvider {
         String balance = prefs.getString("balance", "--");
         String totalUsed = prefs.getString("totalUsed", "0");
         String todayUsed = prefs.getString("todayUsed", "0");
-        String flashTokens = prefs.getString("flashTokens", "0");
-        String proTokens = prefs.getString("proTokens", "0");
+        String flashTodayTokens = prefs.getString("flashTodayTokens", "0");
+        String flashTodayCost = prefs.getString("flashTodayCost", "0");
+        String proTodayTokens = prefs.getString("proTodayTokens", "0");
+        String proTodayCost = prefs.getString("proTodayCost", "0");
         String connected = prefs.getString("connected", "false");
         String lastUpdate = prefs.getString("lastUpdate", "");
 
@@ -88,23 +90,25 @@ public class BalanceWidget extends AppWidgetProvider {
             views.setTextColor(R.id.widget_status, isConnected ? Color.parseColor("#00D9A3") : Color.parseColor("#FF6B35"));
             views.setTextViewText(R.id.widget_balance_value, "¥" + balance);
             views.setTextColor(R.id.widget_balance_value, Color.parseColor("#60A5FA"));
-            views.setTextViewText(R.id.widget_today_cost, "今日 ¥" + todayUsed);
-            views.setTextViewText(R.id.widget_month_cost, "本月 ¥" + totalUsed);
-            views.setTextViewText(R.id.widget_flash_tokens, flashTokens + " tokens");
-            views.setTextViewText(R.id.widget_pro_tokens, proTokens + " tokens");
+
+            views.setTextViewText(R.id.widget_flash_tokens, flashTodayTokens + " tokens");
+            views.setTextViewText(R.id.widget_flash_cost, "¥" + flashTodayCost);
+            views.setTextViewText(R.id.widget_pro_tokens, proTodayTokens + " tokens");
+            views.setTextViewText(R.id.widget_pro_cost, "¥" + proTodayCost);
         } else {
             views.setTextViewText(R.id.widget_status, "等待数据");
             views.setTextColor(R.id.widget_status, Color.parseColor("#94A3B8"));
             views.setTextViewText(R.id.widget_balance_value, "¥ --.--");
             views.setTextColor(R.id.widget_balance_value, Color.parseColor("#60A5FA"));
-            views.setTextViewText(R.id.widget_today_cost, "今日 --");
-            views.setTextViewText(R.id.widget_month_cost, "本月 --");
+
             views.setTextViewText(R.id.widget_flash_tokens, "等待同步");
+            views.setTextViewText(R.id.widget_flash_cost, "--");
             views.setTextViewText(R.id.widget_pro_tokens, "等待同步");
+            views.setTextViewText(R.id.widget_pro_cost, "--");
         }
 
         if (!lastUpdate.isEmpty()) {
-            views.setTextViewText(R.id.widget_update_time, "更新于 " + lastUpdate);
+            views.setTextViewText(R.id.widget_update_time, "更新 " + lastUpdate);
         } else {
             views.setTextViewText(R.id.widget_update_time, "未同步");
         }
