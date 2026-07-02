@@ -410,6 +410,9 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
       },
     });
 
+    // 同步数据到桌面小组件
+    syncToWidget(get());
+
     // 把平台 API 响应也存入 debugRaw
     const prev = get().debugRaw || "";
     const platformDebug = JSON.stringify({
