@@ -335,21 +335,31 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
         }
       }
 
-      // 构建趋势数据（最近 7 天）
+      // 构建趋势数据（最近 N 天，包含所有日期，没数据的天填 0）
       const trend: Array<{ time: string; tokens: number; cost: number; requests: number }> = [];
       if (bizData?.days) {
-        const recentDays = bizData.days.slice(-7);
-        for (const day of recentDays) {
-          const dayModel = day.data.find((m) => m.model === modelId);
-          if (dayModel) {
-            const dayBreakdown = tokenBreakdown(dayModel.usage);
-            trend.push({
-              time: day.date.slice(5),
-              tokens: dayBreakdown.totalTokens,
-              cost: 0,
-              requests: dayBreakdown.requestCount,
-            });
-          }
+        // 获取所有日期
+        const allDates = bizData.days.map((d) => d.date).sort();
+        const recentDates = allDates.slice(-30); // 最多取 30 天
+
+        for (const date of recentDates) {
+          const dayModel = bizData.days.find((d) => d.date === date)?.data.find((m) => m.model === modelId);
+          const dayBreakdown = dayModel ? tokenBreakdown(dayModel.usage) : { totalTokens: 0, requestCount: 0, cacheHitTokens: 0, cacheMissTokens: 0, responseTokens: 0 };
+
+          // 用官方定价计算费用
+          const dayTokens: TokenUsage = {
+            promptCacheHit: dayBreakdown.cacheHitTokens,
+            promptCacheMiss: dayBreakdown.cacheMissTokens,
+            completion: dayBreakdown.responseTokens,
+          };
+          const dayCost = calcCost(dayTokens, modelId);
+
+          trend.push({
+            time: date.slice(5), // MM-DD
+            tokens: dayBreakdown.totalTokens,
+            cost: Number(dayCost.toFixed(4)),
+            requests: dayBreakdown.requestCount,
+          });
         }
       }
 
