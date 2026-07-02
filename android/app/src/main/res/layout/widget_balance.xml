@@ -5,18 +5,14 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="#0F1729"
-    android:paddingLeft="14dp"
-    android:paddingRight="14dp"
-    android:paddingTop="12dp"
-    android:paddingBottom="12dp">
+    android:padding="12dp">
 
-    <!-- 顶部标题行 -->
+    <!-- 标题行 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:layout_marginBottom="10dp">
+        android:layout_marginBottom="8dp">
 
         <TextView
             android:layout_width="0dp"
@@ -43,68 +39,50 @@
             android:text="↻"
             android:textColor="#CBD5E1"
             android:textSize="12sp"
-            android:paddingLeft="4dp"
-            android:paddingRight="4dp"
-            android:paddingTop="2dp"
-            android:paddingBottom="2dp" />
+            android:padding="4dp" />
     </LinearLayout>
 
     <!-- 余额 -->
-    <LinearLayout
+    <TextView
+        android:id="@+id/widget_balance_value"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:gravity="center_horizontal"
-        android:layout_marginBottom="12dp">
+        android:text="¥ --.--"
+        android:textColor="#60A5FA"
+        android:textSize="26sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:layout_marginBottom="2dp" />
 
-        <TextView
-            android:id="@+id/widget_balance_value"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="¥ --.--"
-            android:textColor="#60A5FA"
-            android:textSize="26sp"
-            android:textStyle="bold" />
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="剩余余额"
+        android:textColor="#64748B"
+        android:textSize="9sp"
+        android:gravity="center"
+        android:layout_marginBottom="10dp" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="剩余余额"
-            android:textColor="#64748B"
-            android:textSize="9sp"
-            android:layout_marginTop="2dp" />
-    </LinearLayout>
-
-    <!-- Flash 模型卡片 -->
+    <!-- Flash 模型 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:background="#1E293B"
-        android:paddingLeft="10dp"
-        android:paddingRight="10dp"
-        android:paddingTop="8dp"
-        android:paddingBottom="8dp"
+        android:padding="10dp"
         android:layout_marginBottom="6dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="center_vertical"
             android:layout_marginBottom="4dp">
-
-            <View
-                android:layout_width="6dp"
-                android:layout_height="6dp"
-                android:background="#60A5FA"
-                android:layout_marginRight="5dp" />
 
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="V4 Flash"
+                android:text="● V4 Flash"
                 android:textColor="#60A5FA"
                 android:textSize="10sp"
                 android:textStyle="bold" />
@@ -129,36 +107,26 @@
             android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- Pro 模型卡片 -->
+    <!-- Pro 模型 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:background="#1E293B"
-        android:paddingLeft="10dp"
-        android:paddingRight="10dp"
-        android:paddingTop="8dp"
-        android:paddingBottom="8dp"
+        android:padding="10dp"
         android:layout_marginBottom="10dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="center_vertical"
             android:layout_marginBottom="4dp">
-
-            <View
-                android:layout_width="6dp"
-                android:layout_height="6dp"
-                android:background="#A855F7"
-                android:layout_marginRight="5dp" />
 
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="V4 Pro"
+                android:text="● V4 Pro"
                 android:textColor="#A855F7"
                 android:textSize="10sp"
                 android:textStyle="bold" />
@@ -183,7 +151,7 @@
             android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- 底部更新时间 -->
+    <!-- 更新时间 -->
     <TextView
         android:id="@+id/widget_update_time"
         android:layout_width="match_parent"
