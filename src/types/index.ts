@@ -21,7 +21,6 @@ export interface ModelMetric {
   todayCost: number;            // 今日费用 (元)
   totalCost: number;            // 累计费用 (元)
   todayRequests: number;        // 今日请求数
-  rps: number;                  // 实时每秒请求数
   avgLatency: number;           // 平均延迟 ms
   successRate: number;          // 成功率
   trend: TrendPoint[];          // 24h 趋势

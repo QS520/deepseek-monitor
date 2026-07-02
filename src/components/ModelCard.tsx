@@ -2,7 +2,7 @@ import type { ModelMetric } from "@/types";
 import { sumTokens } from "@/types";
 import AnimatedNumber from "@/components/AnimatedNumber";
 import { formatTokens, formatCost } from "@/lib/mockData";
-import { ChevronRight, Zap, Coins, Activity } from "lucide-react";
+import { ChevronRight, Zap, Coins } from "lucide-react";
 
 interface ModelCardProps {
   model: ModelMetric;
@@ -95,7 +95,7 @@ export default function ModelCard({ model, accentColor, onClick }: ModelCardProp
       </div>
 
       {/* 底部指标 */}
-      <div className="pl-2 grid grid-cols-3 gap-2">
+      <div className="pl-2 grid grid-cols-2 gap-2">
         <div className="flex items-center gap-1.5">
           <Coins size={11} className="text-neon-orange" />
           <div>
@@ -109,7 +109,7 @@ export default function ModelCard({ model, accentColor, onClick }: ModelCardProp
           </div>
         </div>
         <div className="flex items-center gap-1.5">
-          <Activity size={11} className="text-neon-cyan" />
+          <Zap size={11} className="text-neon-cyan" />
           <div>
             <span className="text-[9px] text-slate-500 block">请求数</span>
             <AnimatedNumber
@@ -117,18 +117,6 @@ export default function ModelCard({ model, accentColor, onClick }: ModelCardProp
               formatter={(n) => formatTokens(n)}
               flashOnUpdate
               className="font-mono text-xs font-bold text-white"
-            />
-          </div>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <Zap size={11} className="text-neon-purple" />
-          <div>
-            <span className="text-[9px] text-slate-500 block">实时 rps</span>
-            <AnimatedNumber
-              value={model.rps}
-              formatter={(n) => Math.floor(n).toString()}
-              flashOnUpdate
-              className="font-mono text-xs font-bold text-neon-purple"
             />
           </div>
         </div>

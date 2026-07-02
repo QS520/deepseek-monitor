@@ -8,7 +8,7 @@ import TrendChartCard from "@/components/TrendChartCard";
 import AnimatedNumber from "@/components/AnimatedNumber";
 import { formatTokens, formatCost } from "@/lib/mockData";
 import type { ChartSegment } from "@/types";
-import { Coins, Zap, Activity, Clock, TrendingUp } from "lucide-react";
+import { Coins, Zap, Clock, TrendingUp } from "lucide-react";
 
 const MODEL_COLORS: Record<string, string> = {
   "deepseek-v4-flash": "#4D6BFE",
@@ -98,18 +98,18 @@ export default function ModelDetail() {
             </div>
             <div className="text-right">
               <AnimatedNumber
-                value={model.rps}
-                formatter={(n) => Math.floor(n).toString()}
+                value={model.todayRequests}
+                formatter={formatTokens}
                 flashOnUpdate
                 className="font-mono text-2xl font-bold"
               />
-              <span className="text-[10px] text-slate-500 block" style={{ color: accentColor }}>req/s</span>
+              <span className="text-[10px] text-slate-500 block" style={{ color: accentColor }}>今日请求</span>
             </div>
           </div>
         </div>
 
         {/* 今日核心指标 */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <div className="glass-card rounded-2xl p-3.5">
             <div className="flex items-center gap-1.5 mb-1.5">
               <Zap size={12} style={{ color: accentColor }} />
@@ -139,7 +139,7 @@ export default function ModelDetail() {
           </div>
           <div className="glass-card rounded-2xl p-3.5">
             <div className="flex items-center gap-1.5 mb-1.5">
-              <Activity size={12} className="text-neon-cyan" />
+              <Zap size={12} className="text-neon-cyan" />
               <span className="text-[10px] text-slate-400">请求数</span>
             </div>
             <AnimatedNumber
@@ -148,21 +148,6 @@ export default function ModelDetail() {
               flashOnUpdate
               className="font-mono text-xl font-bold text-white"
             />
-          </div>
-          <div className="glass-card rounded-2xl p-3.5">
-            <div className="flex items-center gap-1.5 mb-1.5">
-              <Clock size={12} className="text-neon-purple" />
-              <span className="text-[10px] text-slate-400">平均延迟</span>
-            </div>
-            <div className="flex items-baseline gap-0.5">
-              <AnimatedNumber
-                value={model.avgLatency}
-                formatter={(n) => Math.floor(n).toString()}
-                flashOnUpdate
-                className="font-mono text-xl font-bold text-neon-purple"
-              />
-              <span className="text-xs text-slate-500">ms</span>
-            </div>
           </div>
         </div>
 
