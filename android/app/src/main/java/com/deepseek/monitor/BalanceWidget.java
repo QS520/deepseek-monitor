@@ -21,6 +21,15 @@ public class BalanceWidget extends AppWidgetProvider {
     static final String ACTION_REFRESH = "com.deepseek.monitor.WIDGET_REFRESH";
     static final String TAG = "BalanceWidget";
 
+    private static String formatCost(String cost) {
+        try {
+            double val = Double.parseDouble(cost);
+            return String.format("%.2f", val);
+        } catch (Exception e) {
+            return "0.00";
+        }
+    }
+
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
         Log.d(TAG, "onUpdate: widgetIds count=" + (appWidgetIds != null ? appWidgetIds.length : 0));
@@ -92,9 +101,9 @@ public class BalanceWidget extends AppWidgetProvider {
             views.setTextColor(R.id.widget_balance_value, Color.parseColor("#60A5FA"));
 
             views.setTextViewText(R.id.widget_flash_tokens, flashTodayTokens + " tokens");
-            views.setTextViewText(R.id.widget_flash_cost, "¥" + flashTodayCost);
+            views.setTextViewText(R.id.widget_flash_cost, "¥" + formatCost(flashTodayCost));
             views.setTextViewText(R.id.widget_pro_tokens, proTodayTokens + " tokens");
-            views.setTextViewText(R.id.widget_pro_cost, "¥" + proTodayCost);
+            views.setTextViewText(R.id.widget_pro_cost, "¥" + formatCost(proTodayCost));
         } else {
             views.setTextViewText(R.id.widget_status, "等待数据");
             views.setTextColor(R.id.widget_status, Color.parseColor("#94A3B8"));
