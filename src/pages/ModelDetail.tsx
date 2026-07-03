@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { useMonitorStore } from "@/store/useMonitorStore";
 import { useRealtimeData } from "@/hooks/useRealtimeData";
 import { sumTokens, getPricing } from "@/types";
@@ -8,6 +9,7 @@ import TrendChartCard from "@/components/TrendChartCard";
 import AnimatedNumber from "@/components/AnimatedNumber";
 import { formatTokens, formatCost } from "@/lib/mockData";
 import type { ChartSegment } from "@/types";
+import { getModelDailyRecords, type DailyRecord } from "@/lib/dailyRecordStore";
 import { Coins, Zap, Clock, TrendingUp } from "lucide-react";
 
 const MODEL_COLORS: Record<string, string> = {
@@ -20,6 +22,23 @@ export default function ModelDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const model = useMonitorStore((s) => s.models.find((m) => m.id === id));
+
+  // 加载本地存储的每日记录（跨月历史，合并原生层 + localStorage）
+  // 注意：hooks 必须在条件 return 之前
+  const [historyRecords, setHistoryRecords] = useState<DailyRecord[]>([]);
+  const modelTrendLen = model?.trend.length ?? 0;
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    getModelDailyRecords(id, 30)
+      .then((recs) => {
+        if (!cancelled) setHistoryRecords(recs);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [id, modelTrendLen]);
 
   if (!model) {
     return (
@@ -69,8 +88,22 @@ export default function ModelDetail() {
     },
   ];
 
-  const trendData = model.trend.length > 0 ? model.trend.map((t) => ({ time: t.time, value: t.tokens })) : [];
-  const costTrendData = model.trend.length > 0 ? model.trend.map((t) => ({ time: t.time, value: Number((t.cost * 1000).toFixed(2)) })) : [];
+  // 趋势数据：本地存储的 30 天历史（跨月）+ 平台 API 当月实时数据合并
+  // 本地存储提供日期框架和跨月历史，平台 API 当月数据覆盖（更实时准确）
+  const trendMap: Record<string, { tokens: number; cost: number }> = {};
+  for (const r of historyRecords) {
+    trendMap[r.date.slice(5)] = { tokens: r.tokens, cost: r.cost };
+  }
+  for (const t of model.trend) {
+    trendMap[t.time] = { tokens: t.tokens, cost: t.cost };
+  }
+  // 本地存储加载完成前，用 model.trend 兜底
+  const trendData = historyRecords.length > 0
+    ? historyRecords.map((r) => ({ time: r.date.slice(5), value: trendMap[r.date.slice(5)]?.tokens ?? 0 }))
+    : model.trend.map((t) => ({ time: t.time, value: t.tokens }));
+  const costTrendData = historyRecords.length > 0
+    ? historyRecords.map((r) => ({ time: r.date.slice(5), value: Number(((trendMap[r.date.slice(5)]?.cost ?? 0) * 1000).toFixed(2)) }))
+    : model.trend.map((t) => ({ time: t.time, value: Number((t.cost * 1000).toFixed(2)) }));
 
   return (
     <div className="flex flex-col h-full">

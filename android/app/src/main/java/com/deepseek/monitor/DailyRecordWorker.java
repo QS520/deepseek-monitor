@@ -32,8 +32,8 @@ public class DailyRecordWorker extends Worker {
     private static final String CONFIG_PREFS = "ds_config"; // 存储 apiKey 和 usageToken
 
     // 平台 API 端点
-    private static final String AMOUNT_URL = "https://platform.deepseek.com/api/v_usage/amount";
-    private static final String COST_URL = "https://platform.deepseek.com/api/v_usage/cost";
+    private static final String AMOUNT_URL = "https://platform.deepseek.com/api/v0/usage/amount";
+    private static final String COST_URL = "https://platform.deepseek.com/api/v0/usage/cost";
 
     // 官方定价（元/百万 tokens）
     private static class Pricing {
@@ -125,7 +125,8 @@ public class DailyRecordWorker extends Worker {
             for (int i = 0; i < dataArr.length(); i++) {
                 JSONObject modelData = dataArr.optJSONObject(i);
                 String model = modelData.optString("model");
-                JSONObject usage = modelData.optJSONObject("usage");
+                // usage 实际是数组格式: [{type, amount}, ...]
+                JSONArray usage = modelData.optJSONArray("usage");
 
                 if ("deepseek-v4-flash".equals(model)) {
                     hasFlash = true;
@@ -152,35 +153,68 @@ public class DailyRecordWorker extends Worker {
     }
 
     /**
-     * 解析 usage 对象，计算 token 总数和费用
+     * 解析 usage 数组，计算 token 总数和费用
+     * usage 格式: [{type, amount}, ...]
+     * type ∈ {REQUEST, PROMPT_CACHE_HIT_TOKEN, PROMPT_CACHE_MISS_TOKEN, RESPONSE_TOKEN, PROMPT_TOKEN}
+     * amount 是字符串数字
      * 返回 [totalTokens, cost]
      */
-    private double[] calcTokensAndCost(JSONObject usage, String modelId) {
+    private double[] calcTokensAndCost(JSONArray usage, String modelId) {
+        long cacheHit = 0, cacheMiss = 0, response = 0;
         try {
-            // usage 格式: { "0": [hitTokens, ...], "1": [missTokens, ...], "2": [responseTokens, ...] }
-            // 实际平台 API 返回的 usage 是按 token 类型分组的
-            // 这里简化处理：尝试从 usage 中提取 cache_hit, cache_miss, response
-            long cacheHit = 0, cacheMiss = 0, response = 0;
-
-            // 尝试多种可能的字段名
-            cacheHit = usage.optLong("cache_hit_tokens", usage.optLong("prompt_cache_hit", 0));
-            cacheMiss = usage.optLong("cache_miss_tokens", usage.optLong("prompt_cache_miss", 0));
-            response = usage.optLong("completion_tokens", usage.optLong("response_tokens", 0));
-
-            long totalTokens = cacheHit + cacheMiss + response;
-
-            Pricing p = getPricing(modelId);
-            double cost = (cacheHit / 1_000_000.0) * p.promptCacheHit
-                    + (cacheMiss / 1_000_000.0) * p.promptCacheMiss
-                    + (response / 1_000_000.0) * p.completion;
-
-            // 四舍五入到 4 位小数
-            cost = Math.round(cost * 10000) / 10000.0;
-
-            return new double[]{totalTokens, cost};
+            if (usage == null) return new double[]{0, 0};
+            for (int i = 0; i < usage.length(); i++) {
+                JSONObject entry = usage.optJSONObject(i);
+                if (entry == null) continue;
+                String type = entry.optString("type", "");
+                long val = parseAmount(entry);
+                switch (type) {
+                    case "PROMPT_CACHE_HIT_TOKEN":
+                        cacheHit += val;
+                        break;
+                    case "PROMPT_CACHE_MISS_TOKEN":
+                        cacheMiss += val;
+                        break;
+                    case "RESPONSE_TOKEN":
+                        response += val;
+                        break;
+                    case "PROMPT_TOKEN":
+                        // 旧版未分类输入 token，计入未命中
+                        cacheMiss += val;
+                        break;
+                    case "REQUEST":
+                    default:
+                        break;
+                }
+            }
         } catch (Exception e) {
-            Log.e(TAG, "计算费用异常", e);
-            return new double[]{0, 0};
+            Log.e(TAG, "解析 usage 异常", e);
+        }
+
+        long totalTokens = cacheHit + cacheMiss + response;
+
+        Pricing p = getPricing(modelId);
+        double cost = (cacheHit / 1_000_000.0) * p.promptCacheHit
+                + (cacheMiss / 1_000_000.0) * p.promptCacheMiss
+                + (response / 1_000_000.0) * p.completion;
+
+        // 四舍五入到 4 位小数
+        cost = Math.round(cost * 10000) / 10000.0;
+
+        return new double[]{totalTokens, cost};
+    }
+
+    /**
+     * 解析 amount 字段（可能是字符串或数字）
+     */
+    private long parseAmount(JSONObject entry) {
+        try {
+            Object val = entry.opt("amount");
+            if (val == null) return 0;
+            if (val instanceof Number) return ((Number) val).longValue();
+            return Long.parseLong(val.toString());
+        } catch (Exception e) {
+            return entry.optLong("amount", 0);
         }
     }
 
@@ -207,7 +241,8 @@ public class DailyRecordWorker extends Worker {
             Request request = new Request.Builder()
                     .url(url)
                     .addHeader("Authorization", "Bearer " + token)
-                    .addHeader("Content-Type", "application/json")
+                    .addHeader("Accept", "application/json")
+                    .addHeader("x-app-version", "1.0.0")
                     .build();
             Response response = client.newCall(request).execute();
             String body = response.body() != null ? response.body().string() : "{}";

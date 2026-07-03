@@ -40,10 +40,13 @@ export function loadDailyRecords(): DailyRecord[] {
 // 保存所有记录（前端 localStorage）
 function saveAllRecords(records: DailyRecord[]): void {
   try {
-    // 清理超过 MAX_DAYS 的旧记录
+    // 清理超过 MAX_DAYS 的旧记录（使用本地时间）
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - MAX_DAYS);
-    const cutoffStr = cutoff.toISOString().slice(0, 10);
+    const cy = cutoff.getFullYear();
+    const cm = String(cutoff.getMonth() + 1).padStart(2, "0");
+    const cd = String(cutoff.getDate()).padStart(2, "0");
+    const cutoffStr = `${cy}-${cm}-${cd}`;
     const filtered = records.filter((r) => r.date >= cutoffStr);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
   } catch {
@@ -170,12 +173,16 @@ export async function getModelDailyRecords(
   }
 
   // 4. 生成最近 N 天的日期列表，填充缺失的天
+  // 注意：使用本地时间（与 store 和 Worker 一致），不能用 toISOString（UTC）
   const result: DailyRecord[] = [];
   const today = new Date();
   for (let i = days - 1; i >= 0; i--) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
-    const dateStr = d.toISOString().slice(0, 10);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    const dateStr = `${year}-${month}-${day}`;
     const record = merged[dateStr];
     if (record) {
       result.push(record);
@@ -206,7 +213,11 @@ export function clearDailyRecords(): void {
   }
 }
 
-// 获取今天的日期字符串
+// 获取今天的日期字符串（本地时间，与 store 和 Worker 一致）
 export function getTodayStr(): string {
-  return new Date().toISOString().slice(0, 10);
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
