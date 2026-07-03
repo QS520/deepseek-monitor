@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { ModelMetric, AccountBalance, TokenUsage, ModelId } from "@/types";
 import type { ModelInfo } from "@/lib/deepseekApi";
-import { calcCost, getPricing } from "@/types";
+import { calcCost, getPricing, sumTokens } from "@/types";
 import {
   fetchBalance,
   fetchUsage,
@@ -16,6 +16,7 @@ import {
   type PlatformUsageResult,
 } from "@/lib/platformApi";
 import { registerPlugin } from "@capacitor/core";
+import { saveDailyRecordsBatch, getTodayStr } from "@/lib/dailyRecordStore";
 
 // 模型显示信息映射
 const MODEL_INFO: Record<string, { displayName: string; description: string }> = {
@@ -140,6 +141,7 @@ interface MonitorState {
   refreshFromApi: () => Promise<void>;
   refreshFromPlatform: () => Promise<void>;
   fetchAvailableModels: () => Promise<void>;
+  forceSaveToday: () => void; // 23:59 兜底强制保存当日记录
 }
 
 // 基于平台 API 的模型数据结构
@@ -428,6 +430,22 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
     const monthCost = updatedModels.reduce((sum, m) => sum + m.totalCost, 0);
     const currentBalance = get().balance;
 
+    // 保存当日记录到本地存储（每次拉取都更新当日数据）
+    // 同一天同一模型，覆盖更新；tokens/cost 是当日累计值
+    try {
+      const todayDate = getTodayStr();
+      saveDailyRecordsBatch(
+        todayDate,
+        updatedModels.map((m) => ({
+          model: m.id,
+          tokens: sumTokens(m.todayTokens),
+          cost: m.todayCost,
+        }))
+      );
+    } catch {
+      // 存储失败时忽略，不影响主流程
+    }
+
     set({
       models: updatedModels,
       platformModels: ptModels,
@@ -667,6 +685,26 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
       }
     } catch (err) {
       console.error("获取模型列表失败:", err);
+    }
+  },
+
+  // 23:59 兜底：强制保存当日记录（忽略 5 分钟节流）
+  forceSaveToday: () => {
+    const state = get();
+    if (state.models.length === 0) return;
+    try {
+      const todayDate = getTodayStr();
+      saveDailyRecordsBatch(
+        todayDate,
+        state.models.map((m) => ({
+          model: m.id,
+          tokens: sumTokens(m.todayTokens),
+          cost: m.todayCost,
+        })),
+        true // force=true，忽略节流
+      );
+    } catch {
+      // ignore
     }
   },
 }));
