@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#1E293B"
+    android:background="#0F172A"
     android:padding="14dp">
 
     <!-- 标题行 -->
@@ -12,15 +12,16 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginBottom="8dp">
+        android:gravity="center_vertical"
+        android:layout_marginBottom="10dp">
 
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="DeepSeek"
-            android:textColor="#E2E8F0"
-            android:textSize="12sp"
+            android:text="今日用量"
+            android:textColor="#F1F5F9"
+            android:textSize="14sp"
             android:textStyle="bold" />
 
         <TextView
@@ -28,153 +29,150 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="等待数据"
-            android:textColor="#94A3B8"
-            android:textSize="10sp"
-            android:layout_marginRight="8dp" />
-
-        <TextView
-            android:id="@+id/widget_refresh_btn"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="↻"
-            android:textColor="#CBD5E1"
-            android:textSize="12sp"
-            android:padding="4dp" />
-    </LinearLayout>
-
-    <!-- 余额 -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:gravity="center_horizontal"
-        android:layout_marginBottom="10dp">
-
-        <TextView
-            android:id="@+id/widget_balance_value"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="¥ --.--"
-            android:textColor="#60A5FA"
-            android:textSize="28sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="剩余余额"
             android:textColor="#64748B"
-            android:textSize="9sp"
-            android:layout_marginTop="2dp" />
+            android:textSize="10sp" />
     </LinearLayout>
 
-    <!-- 模型列表 -->
+    <!-- 主体：左侧环形图 + 右侧数据 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:layout_marginBottom="8dp">
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
 
-        <!-- Flash -->
+        <!-- 左侧环形图 -->
+        <ImageView
+            android:id="@+id/widget_donut_chart"
+            android:layout_width="110dp"
+            android:layout_height="110dp"
+            android:scaleType="fitCenter"
+            android:contentDescription="今日用量分布" />
+
+        <!-- 右侧模型数据 -->
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:background="#334155"
-            android:paddingLeft="10dp"
-            android:paddingRight="10dp"
-            android:paddingTop="8dp"
-            android:paddingBottom="8dp">
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginLeft="12dp">
 
+            <!-- Flash 行 -->
             <LinearLayout
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
                 android:orientation="vertical">
 
-                <TextView
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="● V4 Flash"
-                    android:textColor="#60A5FA"
-                    android:textSize="10sp"
-                    android:textStyle="bold"
-                    android:layout_marginBottom="2dp" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="●"
+                        android:textColor="#4D6BFE"
+                        android:textSize="10sp"
+                        android:layout_marginRight="4dp" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="V4 Flash"
+                        android:textColor="#94A3B8"
+                        android:textSize="10sp" />
+
+                    <TextView
+                        android:id="@+id/widget_flash_cost"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="--"
+                        android:textColor="#F1F5F9"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
 
                 <TextView
                     android:id="@+id/widget_flash_tokens"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="等待同步"
-                    android:textColor="#CBD5E1"
-                    android:textSize="10sp" />
+                    android:textColor="#475569"
+                    android:textSize="9sp"
+                    android:layout_marginTop="2dp"
+                    android:layout_marginLeft="14dp" />
             </LinearLayout>
 
-            <TextView
-                android:id="@+id/widget_flash_cost"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="--"
-                android:textColor="#F59E0B"
-                android:textSize="10sp"
-                android:textStyle="bold" />
-        </LinearLayout>
-
-        <!-- Pro -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:background="#334155"
-            android:paddingLeft="10dp"
-            android:paddingRight="10dp"
-            android:paddingTop="8dp"
-            android:paddingBottom="8dp"
-            android:layout_marginTop="4dp">
-
+            <!-- 分隔 -->
             <LinearLayout
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#1E293B"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp" />
+
+            <!-- Pro 行 -->
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
                 android:orientation="vertical">
 
-                <TextView
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="● V4 Pro"
-                    android:textColor="#A855F7"
-                    android:textSize="10sp"
-                    android:textStyle="bold"
-                    android:layout_marginBottom="2dp" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="●"
+                        android:textColor="#A855F7"
+                        android:textSize="10sp"
+                        android:layout_marginRight="4dp" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="V4 Pro"
+                        android:textColor="#94A3B8"
+                        android:textSize="10sp" />
+
+                    <TextView
+                        android:id="@+id/widget_pro_cost"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="--"
+                        android:textColor="#F1F5F9"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
 
                 <TextView
                     android:id="@+id/widget_pro_tokens"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="等待同步"
-                    android:textColor="#CBD5E1"
-                    android:textSize="10sp" />
+                    android:textColor="#475569"
+                    android:textSize="9sp"
+                    android:layout_marginTop="2dp"
+                    android:layout_marginLeft="14dp" />
             </LinearLayout>
-
-            <TextView
-                android:id="@+id/widget_pro_cost"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="--"
-                android:textColor="#F59E0B"
-                android:textSize="10sp"
-                android:textStyle="bold" />
         </LinearLayout>
     </LinearLayout>
 
-    <!-- 更新时间 -->
+    <!-- 底部：更新时间 -->
     <TextView
         android:id="@+id/widget_update_time"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="未同步"
-        android:textColor="#475569"
+        android:textColor="#334155"
         android:textSize="8sp"
-        android:gravity="end" />
+        android:gravity="end"
+        android:layout_marginTop="8dp" />
 
 </LinearLayout>
