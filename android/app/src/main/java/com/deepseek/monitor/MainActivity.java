@@ -12,6 +12,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         // 注册自定义插件
         registerPlugin(WidgetSyncPlugin.class);
+        registerPlugin(DailyRecordPlugin.class);
         super.onCreate(savedInstanceState);
         // 允许 WebView 调试 (开发模式)
         WebView.setWebContentsDebuggingEnabled(true);

@@ -142,6 +142,7 @@ interface MonitorState {
   refreshFromPlatform: () => Promise<void>;
   fetchAvailableModels: () => Promise<void>;
   forceSaveToday: () => void; // 23:59 兜底强制保存当日记录
+  initNativeDailyRecord: () => Promise<void>; // App 启动时初始化原生定时任务
 }
 
 // 基于平台 API 的模型数据结构
@@ -249,6 +250,8 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
     // 保存后立即拉取平台数据
     if (token) {
       get().refreshFromPlatform();
+      // 同步到原生层并重新注册定时任务
+      get().initNativeDailyRecord();
     }
   },
 
@@ -432,6 +435,7 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
 
     // 保存当日记录到本地存储（每次拉取都更新当日数据）
     // 同一天同一模型，覆盖更新；tokens/cost 是当日累计值
+    // 注意：saveDailyRecordsBatch 现在是 async（需要写原生层），但不阻塞主流程
     try {
       const todayDate = getTodayStr();
       saveDailyRecordsBatch(
@@ -441,7 +445,9 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
           tokens: sumTokens(m.todayTokens),
           cost: m.todayCost,
         }))
-      );
+      ).catch(() => {
+        // 存储失败时忽略
+      });
     } catch {
       // 存储失败时忽略，不影响主流程
     }
@@ -702,9 +708,34 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
           cost: m.todayCost,
         })),
         true // force=true，忽略节流
-      );
+      ).catch(() => {
+        // ignore
+      });
     } catch {
       // ignore
+    }
+  },
+
+  // App 启动时初始化原生定时任务
+  // 1) 同步 apiKey 和 usageToken 到原生 SharedPreferences（供 Worker 读取）
+  // 2) 注册 WorkManager 每天 23:55 的定时任务
+  initNativeDailyRecord: async () => {
+    const { apiKey, usageToken } = get();
+    if (!apiKey || !usageToken) return;
+
+    try {
+      const { Capacitor } = await import("@capacitor/core");
+      if (!Capacitor.isNativePlatform()) return;
+
+      const DailyRecord = (await import("@/lib/dailyRecordPlugin")).default;
+
+      // 1. 同步配置到原生层
+      await DailyRecord.syncConfig({ apiKey, usageToken });
+
+      // 2. 注册每日 23:55 的定时任务
+      await DailyRecord.scheduleDailyTask();
+    } catch {
+      // 原生调用失败时忽略
     }
   },
 }));
@@ -718,4 +749,8 @@ const startupToken = loadUsageToken();
 if (startupToken) {
   useMonitorStore.getState().refreshFromPlatform();
 }
+
+// App 启动时初始化原生定时任务（注册 23:55 的 WorkManager 任务）
+// 即使 App 不在前台，23:55 也能自动拉取数据并存储
+useMonitorStore.getState().initNativeDailyRecord();
 
