@@ -5,7 +5,7 @@ import { useRealtimeData } from "@/hooks/useRealtimeData";
 import { sumTokens, getPricing } from "@/types";
 import TopBar from "@/components/TopBar";
 import DonutChart from "@/components/DonutChart";
-import TrendChartCard from "@/components/TrendChartCard";
+import RangeTrendCard from "@/components/RangeTrendCard";
 import AnimatedNumber from "@/components/AnimatedNumber";
 import { formatTokens, formatCost } from "@/lib/mockData";
 import type { ChartSegment } from "@/types";
@@ -184,21 +184,19 @@ export default function ModelDetail() {
           </div>
         </div>
 
-        {/* Token 用量趋势 */}
-        <TrendChartCard
+        {/* Token 用量趋势 - 柱状图，可切换一周/一月 */}
+        <RangeTrendCard
           data={trendData}
           title="Token 用量趋势"
           color={accentColor}
-          gradientId="model-token-trend"
         />
 
-        {/* 费用趋势 */}
-        <TrendChartCard
+        {/* 费用趋势 - 柱状图，可切换一周/一月 */}
+        <RangeTrendCard
           data={costTrendData}
           title="费用消耗趋势"
           unit=" 厘"
           color="#FF6B35"
-          gradientId="model-cost-trend"
         />
 
         {/* Token 分布 */}

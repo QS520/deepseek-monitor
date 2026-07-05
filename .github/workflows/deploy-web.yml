@@ -1,0 +1,61 @@
+name: Deploy Web Demo
+
+on:
+  # 推送到 main 自动部署
+  push:
+    branches: [main]
+  # 手动触发
+  workflow_dispatch:
+
+# 防止并发部署
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  deploy-web:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: 配置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 设置 base 路径
+        run: |
+          REPO_NAME=$(basename $GITHUB_REPOSITORY)
+          echo "VITE_BASE=/${REPO_NAME}/" >> $GITHUB_ENV
+
+      - name: 构建 Web 资源
+        env:
+          VITE_BASE: ${{ env.VITE_BASE }}
+        run: pnpm run build
+
+      - name: 上传 Pages 产物
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+      - name: 部署到 GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

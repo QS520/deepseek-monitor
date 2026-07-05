@@ -5,6 +5,8 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 // https://vite.dev/config/
 export default defineConfig({
+  // GitHub Pages 部署在子路径下（/repo-name/），本地开发用根路径
+  base: process.env.VITE_BASE || '/',
   build: {
     sourcemap: 'hidden',
   },

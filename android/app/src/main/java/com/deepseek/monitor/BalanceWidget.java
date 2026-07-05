@@ -59,12 +59,12 @@ public class BalanceWidget extends AppWidgetProvider {
      * 中间显示今日总费用，环形显示 Flash/Pro 占比
      */
     private static Bitmap drawDonutChart(Context context, float flashCost, float proCost) {
-        int size = dpToPx(context, 110);
+        int size = dpToPx(context, 90);
         Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
 
         float total = flashCost + proCost;
-        float strokeWidth = dpToPx(context, 10);
+        float strokeWidth = dpToPx(context, 8);
         float radius = (size - strokeWidth) / 2f - dpToPx(context, 2);
         float cx = size / 2f;
         float cy = size / 2f;
@@ -103,21 +103,21 @@ public class BalanceWidget extends AppWidgetProvider {
         String totalStr = String.format("%.2f", total);
         Paint valuePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         valuePaint.setColor(COLOR_TEXT_PRIMARY);
-        valuePaint.setTextSize(dpToPx(context, 16));
+        valuePaint.setTextSize(dpToPx(context, 13));
         valuePaint.setFakeBoldText(true);
         valuePaint.setTextAlign(Paint.Align.CENTER);
 
         // 计算垂直居中
         Paint.FontMetrics fm = valuePaint.getFontMetrics();
-        float textY = cy - (fm.ascent + fm.descent) / 2f - dpToPx(context, 4);
+        float textY = cy - (fm.ascent + fm.descent) / 2f - dpToPx(context, 3);
         canvas.drawText("¥" + totalStr, cx, textY, valuePaint);
 
         // 底部小字：今日费用
         Paint labelPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         labelPaint.setColor(COLOR_TEXT_SECONDARY);
-        labelPaint.setTextSize(dpToPx(context, 9));
+        labelPaint.setTextSize(dpToPx(context, 8));
         labelPaint.setTextAlign(Paint.Align.CENTER);
-        canvas.drawText("今日费用", cx, cy + dpToPx(context, 14), labelPaint);
+        canvas.drawText("今日费用", cx, cy + dpToPx(context, 11), labelPaint);
 
         return bitmap;
     }

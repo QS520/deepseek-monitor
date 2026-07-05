@@ -1,5 +1,4 @@
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
 import { useMonitorStore } from "@/store/useMonitorStore";
 import { useRealtimeData } from "@/hooks/useRealtimeData";
 import { sumTokens } from "@/types";
@@ -7,9 +6,7 @@ import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import BalanceCard from "@/components/BalanceCard";
 import ModelCard from "@/components/ModelCard";
-import TrendChartCard from "@/components/TrendChartCard";
 import { formatCost, formatTokens } from "@/lib/mockData";
-import { getModelDailyRecords, type DailyRecord } from "@/lib/dailyRecordStore";
 import { Target } from "lucide-react";
 
 const MODEL_COLORS: Record<string, string> = {
@@ -24,65 +21,11 @@ export default function Home() {
   const balance = useMonitorStore((s) => s.balance);
   const selectModel = useMonitorStore((s) => s.selectModel);
   const platformModels = useMonitorStore((s) => s.platformModels);
-  const platformDays = useMonitorStore((s) => s.platformDays);
   const usageTokenReady = useMonitorStore((s) => s.usageTokenReady);
-
-  // 加载本地存储的每日记录（跨月历史，合并原生层 + localStorage）
-  const [historyByModel, setHistoryByModel] = useState<Record<string, DailyRecord[]>>({});
-  const modelIdsKey = models.map((m) => m.id).join(",");
-  const firstTrendLen = models[0]?.trend.length ?? 0;
-  useEffect(() => {
-    const ids = modelIdsKey ? modelIdsKey.split(",") : [];
-    if (ids.length === 0) return;
-    let cancelled = false;
-    Promise.all(
-      ids.map((id) => getModelDailyRecords(id, 30).then((r) => [id, r] as const))
-    )
-      .then((results) => {
-        if (cancelled) return;
-        const map: Record<string, DailyRecord[]> = {};
-        for (const [id, recs] of results) map[id] = recs;
-        setHistoryByModel(map);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [modelIdsKey, firstTrendLen]);
 
   const todayTotalCost = models.reduce((sum, m) => sum + m.todayCost, 0);
   const todayTotalTokens = models.reduce((sum, m) => sum + sumTokens(m.todayTokens), 0);
   const todayTotalRequests = models.reduce((sum, m) => sum + m.todayRequests, 0);
-
-  // 合并趋势：本地存储 30 天（跨月）+ 平台 API 当月实时数据
-  // 本地存储提供跨月历史，平台 API 当月数据覆盖（更实时准确）
-  const dateTokensMap: Record<string, number> = {};
-  const dateKeys: string[] = [];
-  for (const id in historyByModel) {
-    for (const r of historyByModel[id]) {
-      const k = r.date.slice(5);
-      if (!(k in dateTokensMap)) {
-        dateTokensMap[k] = 0;
-        dateKeys.push(k);
-      }
-      dateTokensMap[k] += r.tokens;
-    }
-  }
-  // 平台 API 当月数据覆盖
-  for (const d of platformDays) {
-    const k = d.date.slice(5);
-    if (!(k in dateTokensMap)) dateKeys.push(k);
-    dateTokensMap[k] = d.totalTokens;
-  }
-  const mergedTrend =
-    dateKeys.length > 0
-      ? dateKeys.sort().map((k) => ({ time: k, value: dateTokensMap[k] }))
-      : models.length > 0 && models[0].trend.length > 0
-        ? models[0].trend.map((_, i) => ({
-            time: models[0].trend[i].time,
-            value: models.reduce((sum, m) => sum + (m.trend[i]?.tokens || 0), 0),
-          }))
-        : [];
 
   // 平台 API 总体缓存命中率
   const totalHitAll = platformModels.reduce((s, m) => s + m.cacheHitTokens, 0);
@@ -147,15 +90,6 @@ export default function Home() {
             </div>
           </div>
         )}
-
-        {/* Token 用量趋势 */}
-        <TrendChartCard
-          data={mergedTrend}
-          title="Token 用量趋势"
-          unit=""
-          color="#4D6BFE"
-          gradientId="home-trend"
-        />
 
         {/* 模型卡片 */}
         <div className="space-y-3">

@@ -4,8 +4,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#0F172A"
-    android:padding="14dp">
+    android:background="#0B0F1A"
+    android:padding="12dp">
 
     <!-- 标题行 -->
     <LinearLayout
@@ -13,7 +13,7 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:layout_marginBottom="10dp">
+        android:layout_marginBottom="8dp">
 
         <TextView
             android:layout_width="0dp"
@@ -21,7 +21,7 @@
             android:layout_weight="1"
             android:text="今日用量"
             android:textColor="#F1F5F9"
-            android:textSize="14sp"
+            android:textSize="13sp"
             android:textStyle="bold" />
 
         <TextView
@@ -30,7 +30,7 @@
             android:layout_height="wrap_content"
             android:text="等待数据"
             android:textColor="#64748B"
-            android:textSize="10sp" />
+            android:textSize="9sp" />
     </LinearLayout>
 
     <!-- 主体：左侧环形图 + 右侧数据 -->
@@ -43,8 +43,8 @@
         <!-- 左侧环形图 -->
         <ImageView
             android:id="@+id/widget_donut_chart"
-            android:layout_width="110dp"
-            android:layout_height="110dp"
+            android:layout_width="90dp"
+            android:layout_height="90dp"
             android:scaleType="fitCenter"
             android:contentDescription="今日用量分布" />
 
@@ -54,7 +54,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:orientation="vertical"
-            android:layout_marginLeft="12dp">
+            android:layout_marginLeft="10dp">
 
             <!-- Flash 行 -->
             <LinearLayout
@@ -73,7 +73,7 @@
                         android:layout_height="wrap_content"
                         android:text="●"
                         android:textColor="#4D6BFE"
-                        android:textSize="10sp"
+                        android:textSize="9sp"
                         android:layout_marginRight="4dp" />
 
                     <TextView
@@ -100,9 +100,9 @@
                     android:layout_height="wrap_content"
                     android:text="等待同步"
                     android:textColor="#475569"
-                    android:textSize="9sp"
-                    android:layout_marginTop="2dp"
-                    android:layout_marginLeft="14dp" />
+                    android:textSize="8sp"
+                    android:layout_marginTop="1dp"
+                    android:layout_marginLeft="13dp" />
             </LinearLayout>
 
             <!-- 分隔 -->
@@ -110,8 +110,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
                 android:background="#1E293B"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="8dp" />
+                android:layout_marginTop="6dp"
+                android:layout_marginBottom="6dp" />
 
             <!-- Pro 行 -->
             <LinearLayout
@@ -130,7 +130,7 @@
                         android:layout_height="wrap_content"
                         android:text="●"
                         android:textColor="#A855F7"
-                        android:textSize="10sp"
+                        android:textSize="9sp"
                         android:layout_marginRight="4dp" />
 
                     <TextView
@@ -157,9 +157,9 @@
                     android:layout_height="wrap_content"
                     android:text="等待同步"
                     android:textColor="#475569"
-                    android:textSize="9sp"
-                    android:layout_marginTop="2dp"
-                    android:layout_marginLeft="14dp" />
+                    android:textSize="8sp"
+                    android:layout_marginTop="1dp"
+                    android:layout_marginLeft="13dp" />
             </LinearLayout>
         </LinearLayout>
     </LinearLayout>
@@ -171,8 +171,9 @@
         android:layout_height="wrap_content"
         android:text="未同步"
         android:textColor="#334155"
-        android:textSize="8sp"
+        android:textSize="7sp"
         android:gravity="end"
-        android:layout_marginTop="8dp" />
+        android:layout_marginTop="4dp" />
 
 </LinearLayout>
+
