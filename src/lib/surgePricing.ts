@@ -1,43 +1,88 @@
 // 调价方案 - 高峰期临时调价模块（设计方案，暂未集成到正式计算流程）
 //
 // 背景：官方 7 月中旬起每天高峰期涨价 50%
-// 设计目标：在设置页提供"高峰期调价"开关，可自定义：
-//   1. 调价时间段（默认 19:00 - 23:00）
-//   2. 涨幅百分比（默认 50%）
-//   3. 启用/禁用
+// 支持每天多个时段（如 8:00-12:00 + 14:00-18:00），时间粒度 30 分钟
 //
-// 费用计算时，若当前时间在调价时段内，所有单价 × (1 + 涨幅/100)
+// 费用计算时，若当前时刻处于任一调价时段内，所有单价 × (1 + 涨幅/100)
 
 import { PRICING, type ModelPricing, type TokenUsage, type ModelId } from "@/types";
+
+// 时间点：分钟数（0-1439），粒度 30 分钟
+// 例如 9:30 = 9*60+30 = 570
+export interface TimeOfDay {
+  hour: number;   // 0-23
+  minute: number; // 0 或 30
+}
+
+// 单个调价时段
+export interface SurgeTimeRange {
+  id: string;          // 唯一 ID
+  start: TimeOfDay;    // 起始时刻
+  end: TimeOfDay;      // 结束时刻（不含）
+  label?: string;      // 可选备注
+}
 
 // 调价配置
 export interface SurgePricingConfig {
   enabled: boolean;        // 是否启用
-  startHour: number;      // 起始小时（0-23），默认 19
-  endHour: number;        // 结束小时（0-23），默认 23
-  surgePercent: number;   // 涨幅百分比，默认 50（即 +50%）
-  note?: string;          // 备注
+  ranges: SurgeTimeRange[]; // 多个时段
+  surgePercent: number;     // 涨幅百分比，默认 50
+  note?: string;
 }
 
-// 默认配置（7 月中旬官方计划）
 export const DEFAULT_SURGE_CONFIG: SurgePricingConfig = {
   enabled: false,
-  startHour: 19,
-  endHour: 23,
+  ranges: [
+    { id: "default-1", start: { hour: 19, minute: 0 }, end: { hour: 23, minute: 0 }, label: "晚高峰" },
+  ],
   surgePercent: 50,
   note: "7 月中旬起官方高峰期调价",
 };
 
-// 本地存储 key
 const STORAGE_KEY = "deepseek_surge_pricing_config";
+
+// 时间点转分钟数
+export function timeToMinutes(t: TimeOfDay): number {
+  return t.hour * 60 + t.minute;
+}
+
+// 分钟数转 HH:MM 字符串
+export function minutesToLabel(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+// TimeOfDay 转 HH:MM
+export function timeToLabel(t: TimeOfDay): string {
+  return minutesToLabel(timeToMinutes(t));
+}
+
+// 生成唯一 ID
+export function genRangeId(): string {
+  return `range-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+}
 
 // 加载配置
 export function loadSurgeConfig(): SurgePricingConfig {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_SURGE_CONFIG;
-    const parsed = { ...DEFAULT_SURGE_CONFIG, ...JSON.parse(raw) };
-    return parsed;
+    const parsed = JSON.parse(raw);
+    // 兼容旧格式（单时段）
+    if (parsed.startHour !== undefined && !parsed.ranges) {
+      return {
+        enabled: parsed.enabled ?? false,
+        ranges: [{
+          id: "migrated",
+          start: { hour: parsed.startHour, minute: 0 },
+          end: { hour: parsed.endHour, minute: 0 },
+        }],
+        surgePercent: parsed.surgePercent ?? 50,
+        note: parsed.note,
+      };
+    }
+    return { ...DEFAULT_SURGE_CONFIG, ...parsed };
   } catch {
     return DEFAULT_SURGE_CONFIG;
   }
@@ -52,17 +97,23 @@ export function saveSurgeConfig(config: SurgePricingConfig): void {
   }
 }
 
-// 判断某时刻是否处于高峰期
+// 判断某时刻是否处于任一调价时段内
 export function isSurgeTime(date: Date, config: SurgePricingConfig): boolean {
-  if (!config.enabled) return false;
-  const hour = date.getHours();
-  if (config.startHour <= config.endHour) {
-    // 不跨天：例如 19-23
-    return hour >= config.startHour && hour < config.endHour;
-  } else {
-    // 跨天：例如 22-6
-    return hour >= config.startHour || hour < config.endHour;
+  if (!config.enabled || config.ranges.length === 0) return false;
+  const minutes = date.getHours() * 60 + date.getMinutes();
+  for (const range of config.ranges) {
+    const startMin = timeToMinutes(range.start);
+    const endMin = timeToMinutes(range.end);
+    if (startMin === endMin) continue; // 空时段跳过
+    if (startMin < endMin) {
+      // 不跨天
+      if (minutes >= startMin && minutes < endMin) return true;
+    } else {
+      // 跨天（如 22:00 - 06:00）
+      if (minutes >= startMin || minutes < endMin) return true;
+    }
   }
+  return false;
 }
 
 // 获取当前生效的某模型定价（考虑调价）
@@ -101,12 +152,15 @@ export function calcCostWithSurge(
   );
 }
 
-// 计算给定小时下，今日预计进入高峰期的总时长（小时）
-export function getSurgeHoursToday(config: SurgePricingConfig): number {
+// 今日所有时段总时长（分钟）
+export function getSurgeMinutesToday(config: SurgePricingConfig): number {
   if (!config.enabled) return 0;
-  if (config.startHour <= config.endHour) {
-    return config.endHour - config.startHour;
-  } else {
-    return 24 - config.startHour + config.endHour;
+  let total = 0;
+  for (const range of config.ranges) {
+    const startMin = timeToMinutes(range.start);
+    const endMin = timeToMinutes(range.end);
+    if (startMin === endMin) continue;
+    total += startMin < endMin ? (endMin - startMin) : (1440 - startMin + endMin);
   }
+  return total;
 }
