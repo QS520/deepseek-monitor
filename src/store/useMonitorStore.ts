@@ -173,13 +173,22 @@ function emptyModels(): ModelMetric[] {
   return [];
 }
 
+function loadWarningThreshold(): number {
+  try {
+    const saved = localStorage.getItem("deepseek_warning_threshold");
+    return saved ? Number(saved) : 50;
+  } catch {
+    return 50;
+  }
+}
+
 function emptyBalance(): AccountBalance {
   return {
     total: 0,
     used: 0,
     remaining: 0,
     freeCredits: 0,
-    warningThreshold: 50,
+    warningThreshold: loadWarningThreshold(),
   };
 }
 
@@ -226,10 +235,16 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
 
   selectModel: (id) => set({ selectedModelId: id }),
 
-  updateWarningThreshold: (value) =>
+  updateWarningThreshold: (value) => {
+    try {
+      localStorage.setItem("deepseek_warning_threshold", String(value));
+    } catch {
+      // localStorage 不可用时忽略
+    }
     set((state) => ({
       balance: { ...state.balance, warningThreshold: value },
-    })),
+    }));
+  },
 
   setApiKey: (key) => {
     try {
@@ -259,6 +274,7 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
     try {
       localStorage.removeItem("deepseek_api_key");
       localStorage.removeItem("deepseek_usage_token");
+      localStorage.removeItem("deepseek_warning_threshold");
     } catch {
       // ignore
     }
