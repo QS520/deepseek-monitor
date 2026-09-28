@@ -1,0 +1,54 @@
+{
+  "panels": [
+    {
+      "index": 0,
+      "name": "40x30mm 标签",
+      "width": 40,
+      "height": 30,
+      "paperNumberDisabled": true,
+      "printElements": [
+        {
+          "options": {
+            "left": 5.7,
+            "top": 5.7,
+            "width": 102,
+            "height": 20,
+            "title": "产品标签",
+            "fontSize": 11,
+            "fontWeight": "bold",
+            "textAlign": "center"
+          },
+          "printElementType": { "tid": "defaultModule.text", "title": "文本", "type": "text" }
+        },
+        {
+          "options": {
+            "left": 5.7,
+            "top": 28.3,
+            "width": 102,
+            "height": 14,
+            "field": "productName",
+            "testData": "示例商品 SKU-6688",
+            "hideTitle": true,
+            "fontSize": 8,
+            "textAlign": "center"
+          },
+          "printElementType": { "tid": "defaultModule.text", "title": "文本", "type": "text" }
+        },
+        {
+          "options": {
+            "left": 17,
+            "top": 45.4,
+            "width": 79.4,
+            "height": 31.2,
+            "field": "barcode",
+            "testData": "1234567890123",
+            "textType": "barcode",
+            "hideTitle": true,
+            "textAlign": "center"
+          },
+          "printElementType": { "tid": "defaultModule.barcode", "title": "条码", "type": "text", "custom": true }
+        }
+      ]
+    }
+  ]
+}

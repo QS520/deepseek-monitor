@@ -1,0 +1,20 @@
+{
+  "name": "label-print-pdf",
+  "version": "1.0.0",
+  "description": "hiprint 标签 -> PDF 矢量 -> 静默打印（Electron）",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "dependencies": {
+    "hiprint": "^0.4.0",
+    "jquery": "^3.7.1",
+    "jsbarcode": "^3.12.3",
+    "pdf-to-printer": "^5.8.1",
+    "socket.io-client": "^4.8.4",
+    "unix-print": "^1.3.2"
+  },
+  "devDependencies": {
+    "electron": "^44.0.0"
+  }
+}

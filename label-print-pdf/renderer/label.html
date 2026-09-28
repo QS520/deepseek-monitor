@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>label</title>
+  <!-- hiprint 打印样式（.hiprint-printPaper 定位类 + @page margin:0） -->
+  <link rel="stylesheet" href="../node_modules/hiprint/dist/print-lock.css" />
+  <style>
+    /* 打印页要点：不透明背景、零边距、背景色强制打印 */
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #fff;
+      font-family: 'Microsoft YaHei', 'PingFang SC', 'SimHei', sans-serif;
+    }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  </style>
+</head>
+<body>
+  <div id="label-root"></div>
+
+  <!-- hiprint 运行时：UMD 依赖的外部全局必须先加载
+       必需：jQuery、JsBarcode、socket.io-client（hiprint init 时即读取）
+       可选：模板含二维码时另挂 canvg；用 hiprint 自带 getPdf/html2canvas 时再挂对应库 -->
+  <script src="../node_modules/jquery/dist/jquery.min.js"></script>
+  <script src="../node_modules/jsbarcode/dist/JsBarcode.all.min.js"></script>
+  <script src="../node_modules/socket.io-client/dist/socket.io.min.js"></script>
+  <script src="../node_modules/hiprint/dist/vue-plugin-hiprint.js"></script>
+
+  <script>
+    /**
+     * 主进程通过 executeJavaScript 调用此函数。
+     * 职责：注入 @page 纸张尺寸 → hiprint 渲染模板 → 等字体就绪 → resolve。
+     * 任何一步没做完就 printToPDF，都会把错误冻结进 PDF。
+     */
+    window.__render = async function (templateJson, data) {
+      const panel = templateJson.panels[0]
+
+      // 1) 纸张尺寸 = 标签物理尺寸（mm），配合 preferCSSPageSize: true
+      const pageStyle = document.createElement('style')
+      pageStyle.textContent = `@page { size: ${panel.width}mm ${panel.height}mm; margin: 0; }`
+      document.head.appendChild(pageStyle)
+
+      // 2) hiprint 渲染打印 DOM（文字为 DOM 文本，条码为 SVG，进 PDF 后都是矢量）
+      //    PrintTemplate.getHtml(data) 返回 jQuery 集合（打印纸元素），兼容数组/字符串形式
+      if (typeof hiprint.init === 'function') hiprint.init()
+      const tpl = new hiprint.PrintTemplate({ template: templateJson })
+      const out = tpl.getHtml(data)
+      const root = document.getElementById('label-root')
+      root.innerHTML = ''
+      const nodes = out && typeof out.jquery === 'string'
+        ? out.toArray()                       // jQuery 集合 → DOM 元素数组
+        : Array.isArray(out) ? out : [out]     // 兼容数组 / 单值
+      nodes.forEach((n) => {
+        root.appendChild(n instanceof Node ? n : document.createTextNode(String(n)))
+      })
+
+      // 3) 字体就绪后才允许生成 PDF（webfont/回退字体竞态是不稳定的主要来源）
+      await document.fonts.ready
+      return true
+    }
+  </script>
+</body>
+</html>

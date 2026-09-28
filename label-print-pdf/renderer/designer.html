@@ -1,0 +1,117 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>hiprint PDF 打印调试台</title>
+  <style>
+    body { font-family: 'Microsoft YaHei', sans-serif; background: #f5f6f8; margin: 0; padding: 20px; color: #222; }
+    h2 { font-size: 16px; margin: 0 0 14px; }
+    .row { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+    label { font-size: 12px; color: #666; display: block; margin-bottom: 4px; }
+    select, textarea, button {
+      font-size: 13px; padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;
+    }
+    select { min-width: 240px; }
+    textarea { width: 100%; font-family: Consolas, monospace; font-size: 12px; background: #fff; }
+    .col { flex: 1 1 380px; }
+    .col-template textarea { height: 240px; }
+    .col-data textarea { height: 110px; }
+    button { cursor: pointer; background: #1a73e8; color: #fff; border: none; }
+    button.secondary { background: #fff; color: #1a73e8; border: 1px solid #1a73e8; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    #log { margin-top: 12px; font-size: 12px; padding: 8px 10px; background: #fff; border: 1px solid #e0e0e0; border-radius: 4px; white-space: pre-wrap; min-height: 20px; }
+    .ok { color: #137333; } .err { color: #c5221f; }
+  </style>
+</head>
+<body>
+  <h2>hiprint → PDF 矢量 → 静默打印</h2>
+
+  <div class="row">
+    <div class="col">
+      <label>打印机</label>
+      <select id="printer"></select>
+    </div>
+  </div>
+
+  <div class="row col col-template">
+    <label>hiprint 模板 JSON（替换为你自己设计器导出的模板）</label>
+    <textarea id="template" spellcheck="false"></textarea>
+  </div>
+
+  <div class="row col col-data">
+    <label>测试数据 JSON</label>
+    <textarea id="data" spellcheck="false"></textarea>
+  </div>
+
+  <div class="row">
+    <button id="print">生成 PDF 并静默打印</button>
+    <button id="export" class="secondary">仅导出 PDF（先检查清晰度）</button>
+  </div>
+
+  <div id="log">就绪。</div>
+
+  <script>
+    const $ = (sel) => document.querySelector(sel)
+    const log = (msg, cls) => {
+      $('#log').textContent = msg
+      $('#log').className = cls || ''
+    }
+
+    async function load() {
+      // 打印机列表
+      const printers = await window.electronAPI.listPrinters()
+      $('#printer').innerHTML =
+        '<option value="">（系统默认打印机）</option>' +
+        printers.map((p) => `<option value="${p}">${p}</option>`).join('')
+
+      // 默认模板 + 数据
+      $('#template').value = await window.electronAPI.getDefaultTemplate()
+      $('#data').value = JSON.stringify(
+        { productName: '示例商品 SKU-6688', barcode: '1234567890123', price: '¥25.90' },
+        null, 2
+      )
+    }
+
+    function parseBoxes() {
+      const templateJson = JSON.parse($('#template').value)
+      const data = JSON.parse($('#data').value)
+      return { templateJson, data }
+    }
+
+    function lock(on) { $('#print').disabled = on; $('#export').disabled = on; }
+
+    $('#print').addEventListener('click', async () => {
+      try {
+        lock(true)
+        log('渲染模板 → 生成 PDF → 送打印机…')
+        const { templateJson, data } = parseBoxes()
+        const result = await window.electronAPI.printLabel({
+          templateJson, data, printer: $('#printer').value,
+        })
+        if (result.ok) log('已静默打印。', 'ok')
+        else log(`打印失败：${result.error}${result.pdfPath ? '\n（PDF 已保留：' + result.pdfPath + '，可打开检查内容本身是否正常）' : ''}`, 'err')
+      } catch (e) {
+        log(`输入有误：${e.message}`, 'err')
+      } finally {
+        lock(false)
+      }
+    })
+
+    $('#export').addEventListener('click', async () => {
+      try {
+        lock(true)
+        const { templateJson, data } = parseBoxes()
+        const result = await window.electronAPI.exportLabelPdf({ templateJson, data })
+        if (result.canceled) log('已取消导出。')
+        else if (result.ok) log(`PDF 已导出：${result.pdfPath}（放大检查文字/条码，确认矢量清晰再上打印机）`, 'ok')
+      } catch (e) {
+        log(`导出失败：${e.message}`, 'err')
+      } finally {
+        lock(false)
+      }
+    })
+
+    load()
+  </script>
+</body>
+</html>
